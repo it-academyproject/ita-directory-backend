@@ -9,8 +9,7 @@ const swaggerUi = require("swagger-ui-express");
 const swaggerDocument = require("./utils/swagger.json");
 
 const db = require("./models");
-const userRoutes = require("./routes/users");
-const adminRoutes = require("./routes/admins");
+const userRoutes = require("./routes/_reference");
 
 // Check the connection with the DB
 db.sequelize
@@ -31,8 +30,6 @@ app.use(cors());
 app.use(morgan("dev"));
 app.use(helmet());
 app.use(bodyParser.json({limit: "50mb", type: "application/json"}));
-app.use(passport.initialize());
-passport.use(JwtStrategy);
 
 // API
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
@@ -44,6 +41,5 @@ app.get("/", (req, res) => {
 
 // Routes
 app.use("/users", userRoutes);
-app.use("/admins", adminRoutes);
 
 module.exports = app;
