@@ -1,24 +1,37 @@
 // External modules
 const JWT = require("jsonwebtoken");
-const utils = require("./../utils/utils");
+// const utils = require("./../utils/utils");
 
 // Internal modules
 const db = require("../models");
-const Op = db.Sequelize.Op;
+console.log('db: ', db.initModels);
+//const Op = db.Sequelize.Op;
 
 signToken = (userid) => {
+	const maxAge = 15 * 60;
 	return JWT.sign(
 		{
 			iss: "itacademy",
 			sub: {
-				uid: userid,
-			},
-			iat: new Date().getTime(),
-			exp: new Date().setDate(new Date().getDate() + 1),
+				user_id: userid,
+			}
 		},
-		process.env.JWT_SECRET
+		process.env.JWT_SECRET,
+		{ expiresIn: maxAge }
 	);
 };
+
+// Get token
+exports.getToken = (req, res) => {
+	const idUser = '100001';
+	const token = signToken(idUser);
+	res.status(200).send({
+		code: "success",
+		header: "Welcome",
+		message: "Your token",
+		token,
+	});
+}
 
 // Get user
 exports.getUser = async (req, res) => {
