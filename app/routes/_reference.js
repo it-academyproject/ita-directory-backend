@@ -13,10 +13,8 @@ const UsersController = require("./../controllers/_reference");
  * POST /v1/register
  * @summary Allows user to register
  * @tags user
- * @param {string} name - person's firstname
- * @param {string}  lastname - person's lastname
- * @param {string}  email - person's email
- * @param {string}  password - person's chosen password
+ * @param {string} request.body.required - email
+ * @param {string} request.body.required - password
  * @return {object} 200 - success response - application/json
  * @return {object} 400 - Bad request response
  */
