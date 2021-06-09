@@ -7,12 +7,14 @@ const JwtStrategy = require("./middleware/verifyToken");
 const helmet = require("helmet");
 const swaggerUi = require("swagger-ui-express");
 const swaggerDocument = require("./utils/swagger.json");
-
+const expressJSDocSwagger = require('express-jsdoc-swagger');
+const swaggerOptions= require("./utils/swaggerOptions")
 const db = require("./models");
 const userRoutes = require("./routes/_reference");
 
 const authenticateToken = require("./middleware/verifyToken");
 const UsersController = require("./controllers/_reference");
+const options = require("./utils/swaggerOptions");
 
 // Check the connection with the DB
 db.sequelize
@@ -35,7 +37,8 @@ app.use(helmet());
 app.use(express.json({limit: "50mb", type: "application/json"}));
 
 // API
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+expressJSDocSwagger(app)(options);
+// app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Simple, initial route
 app.get("/", (req, res) => {
