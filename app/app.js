@@ -1,14 +1,18 @@
 const express = require("express");
-const bodyParser = require("body-parser");
+// const bodyParser = require("body-parser");
 const morgan = require("morgan");
 const cors = require("cors");
 const JwtStrategy = require("./middleware/verifyToken");
+// const passport = require("passport");
 const helmet = require("helmet");
 const swaggerUi = require("swagger-ui-express");
 const swaggerDocument = require("./utils/swagger.json");
 
 const db = require("./models");
 const userRoutes = require("./routes/_reference");
+
+const authenticateToken = require("./middleware/verifyToken");
+const UsersController = require("./controllers/_reference");
 
 // Check the connection with the DB
 db.sequelize
@@ -28,7 +32,7 @@ app.use(cors());
 // Middlewares
 app.use(morgan("dev"));
 app.use(helmet());
-app.use(bodyParser.json({limit: "50mb", type: "application/json"}));
+app.use(express.json({limit: "50mb", type: "application/json"}));
 
 // API
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
@@ -36,6 +40,11 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 // Simple, initial route
 app.get("/", (req, res) => {
 	res.json({message: "ITA DIRECTORY API"});
+});
+
+app.get("/getToken", UsersController.getToken);
+app.get("/testToken", authenticateToken, (req, res) => {
+	res.json({message: "Correct Token !"});
 });
 
 // Routes

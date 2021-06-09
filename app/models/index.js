@@ -8,20 +8,23 @@ const Sequelize = require("sequelize");
 const sequelize = new Sequelize(dbConfig.DB, dbConfig.USER, dbConfig.PASSWORD, dbConfig.OPTIONS);
 const db = {};
 
-fs.readdirSync(__dirname + "/tables/")
-	.filter((file) => {
-		return file.indexOf(".") !== 0 && file !== basename && file.slice(-3) === ".js";
-	})
-	.forEach((file) => {
-		const model = require(path.join(__dirname + "/tables/", file))(sequelize, Sequelize);
-		db[model.name] = model;
-	});
+// fs.readdirSync(__dirname + "/tables/")
+// 	.filter((file) => {
+// 		return file.indexOf(".") !== 0 && file !== basename && file.slice(-3) === ".js";
+// 	})
+// 	.forEach((file) => {
+// 		const model = require(path.join(__dirname + "/tables/", file))(sequelize, Sequelize);
+// 		db[model.name] = model;
+// 	});
 
-Object.keys(db).forEach((modelName) => {
-	if (db[modelName].associate) {
-		db[modelName].associate(db);
-	}
-}); 
+// Object.keys(db).forEach((modelName) => {
+// 	if (db[modelName].associate) {
+// 		db[modelName].associate(db);
+// 	}
+// });
+
+const initModels = require('./tables/init-models');
+db.initModels = initModels(sequelize);
 
 db.Sequelize = Sequelize;
 db.sequelize = sequelize;

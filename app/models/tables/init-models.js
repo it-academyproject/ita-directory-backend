@@ -9,6 +9,17 @@ function initModels(sequelize) {
   var access_log = _access_log(sequelize, DataTypes);
   var recover_password = _recover_password(sequelize, DataTypes);
   var user = _user(sequelize, DataTypes);
+
+  // (async () => {
+  //   await sequelize.sync();
+  //   const jane = await user.create({
+  //     name: 'jane',
+  //     user_status_id : 1,
+  //     user_role_id : 1,
+  //   });
+  //   console.log(jane.toJSON());
+  // })();
+
   var user_role = _user_role(sequelize, DataTypes);
   var user_status = _user_status(sequelize, DataTypes);
 
