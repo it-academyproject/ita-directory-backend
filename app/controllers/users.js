@@ -3,7 +3,7 @@ const JWT = require("jsonwebtoken");
 // const utils = require("./../utils/utils");
 
 // Internal modules
-const db = require("../models");
+const db = require("../models/index");
 console.log('db: ', db.initModels);
 //const Op = db.Sequelize.Op;
 
@@ -33,7 +33,68 @@ exports.getToken = (req, res) => {
 	});
 }
 
-// Get user
+// Get User (/v1/get_me endPoint)
+exports.getUser = async (req, res) => {
+	// Check that the request isn't empty
+	if (!req.body) {
+		res.status(400).send("Request is empty.");
+	} 
+	try {
+		console.log('***** IM HERE ****')
+		const user = await db.initModels.user.findOne({ where: { id: req.body.id } });
+		if (user === null) {
+		  res.status(204).json({
+			success: "false",
+			message: "user not found"
+		});
+		} else {
+			console.log(user);
+			res.status(200).json({
+				success: "true",
+				name: user.name,
+				lastnames: user.lastnames
+			});
+		}
+	} catch (err) {
+		console.error(err);
+		res.status(500).send({
+			message: err.message || "Some error ocurred while retrieving your account.",
+		});
+	}
+};
+
+//Create user (FOR TESTING PURPOSE)
+exports.createUser = async(req, res) => {
+	try {
+	const {name, lastnames} = req.body;
+	const newUser = await db.initModels.user.create({ name: name, lastnames: lastnames, user_status_id: 1, user_role_id: 1});
+	res.status(200).json({
+		success: "true",
+		user_id: newUser.id,
+		name: newUser.name,
+		lastnames: newUser.lastnames
+	});
+	} catch (err) {
+		console.error(err);
+		res.status(500).send({
+			message: err.message || "Some error ocurred while retrieving your account.",
+		});
+	}
+}  
+
+//get all users (FOR TESTING PURPOSE)
+exports.getAllUsers = async(req, res) => {
+	try {
+	const users = await db.initModels.user.findAll();	
+	res.status(200).json(users);
+	} catch (err) {
+		console.error(err);
+		res.status(500).send({
+			message: err.message || "Some error ocurred while retrieving your account.",
+		});
+	}
+}  
+/* // Get user
 exports.getUser = async (req, res) => {
 	// Check that the request isn't empty
 	if (!req.user) {
@@ -75,7 +136,7 @@ exports.getUser = async (req, res) => {
 			message: err.message || "Some error ocurred while retrieving your account.",
 		});
 	}
-};
+}; */
 
 // Update user
 exports.deleteUser = async (req, res) => {
