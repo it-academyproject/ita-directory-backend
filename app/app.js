@@ -8,7 +8,7 @@ const helmet = require("helmet");
 // const swaggerUi = require("swagger-ui-express");
 // const swaggerDocument = require("./utils/swagger.json");
 const expressJSDocSwagger = require('express-jsdoc-swagger');
-const swaggerOptions= require("./utils/swaggerOptions")
+const options= require("./utils/swaggerOptions")
 const db = require("./models");
 const userRoutes = require("./routes/users");
 

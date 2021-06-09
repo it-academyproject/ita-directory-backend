@@ -15,12 +15,6 @@ const options = {
     exposeSwaggerUI: true,
     exposeApiDocs: false,
     apiDocsPath: '/v3/api-docs',
-    // servers: [
-    //   {
-    //     url: "/",
-    //     description: "Production"
-    //   }
-    // ],
     tags: [
       {
         name: "API ITACADEMY DIRECTORY",
