@@ -10,11 +10,10 @@ const helmet = require("helmet");
 const expressJSDocSwagger = require('express-jsdoc-swagger');
 const swaggerOptions= require("./utils/swaggerOptions")
 const db = require("./models");
-const userRoutes = require("./routes/_reference");
+const userRoutes = require("./routes/users");
 
 const authenticateToken = require("./middleware/verifyToken");
-const UsersController = require("./controllers/_reference");
-const options = require("./utils/swaggerOptions");
+const UsersController = require("./controllers/users");
 
 // Check the connection with the DB
 db.sequelize
@@ -30,6 +29,7 @@ db.sequelize
 const app = express();
 
 app.use(cors());
+app.use(express.json());
 
 // Middlewares
 app.use(morgan("dev"));
