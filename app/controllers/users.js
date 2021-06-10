@@ -6,10 +6,9 @@ const argon2 = require('argon2');
 // Internal modules
 const db = require("../models/index");
 const User = db.initModels.user; 
-//const Op = db.Sequelize.Op;
 
-signToken = (userid) => {
-	const maxAge = 15 * 60;
+const signToken = (userid) => {
+	const maxAge = "15m";   //"2m";
 	return JWT.sign(
 		{
 			iss: "itacademy",
@@ -22,15 +21,50 @@ signToken = (userid) => {
 	);
 };
 
+const signRefreshToken = (userid) => {
+	const maxAge = "1d";	//"4m";
+	return JWT.sign(
+		{
+			iss: "itacademy",
+			sub: {
+				user_id: userid,
+			}
+		},
+		process.env.JWT_REFRESH_TOKEN_SECRET,
+		{ expiresIn: maxAge }
+	);
+}
+
+// Refresh token
+exports.getRefreshToken = (req, res) => {
+	let { refreshToken } = req.body
+    if (!refreshToken) return res.status(400).send({
+		success: "false",
+		message: "refresh token missing"
+	});
+	JWT.verify(refreshToken, process.env.JWT_REFRESH_TOKEN_SECRET,
+        (err, payload) => {
+          if (err) return res.sendStatus(401);
+		  const accessToken = signToken(payload.sub.user_id);
+		  refreshToken = signRefreshToken(payload.sub.user_id);
+		  res.status(200).send({
+			accessToken: accessToken,
+			refreshToken: refreshToken 
+		  })
+		})
+}
+
 // Get token
 exports.getToken = (req, res) => {
 	const idUser = '100001';
-	const token = signToken(idUser);
+	const accessToken = signToken(idUser);
+	const refreshToken = signRefreshToken(idUser);
 	res.status(200).send({
 		code: "success",
 		header: "Welcome",
 		message: "Your token",
-		token,
+		accesstoken: accessToken,
+		refreshToken: refreshToken
 	});
 }
 
@@ -250,47 +284,40 @@ exports.login = async (req, res) => {
 	if (!email || !password) {
 		res.status(400).send({
 			code: "error",
-			message: "Content can not be empty!",
+			message: "email and password compulsory!",
 		});
 		return;
 	}
 
 	try {
-		const USER = await db.mec_user.findOne({
-			attributes: ["id", "mec_pwd"],
-			where: db.sequelize.where(
-				db.sequelize.fn("lower", db.sequelize.col("mec_un")),
-				db.sequelize.fn("lower", email)
-			),
-		});
-
-		if (!USER) {
-			res.status(200).send({
+		const user = await User.findOne({ where: { email: email } });
+		if (!user) return res.status(404).send({
 				code: "error",
 				header: "User doesn't exist",
-				message: "There's no user with that email, please try again or get in touch.",
-			});
-			return;
-		}
+				message: "There's no user with that email",
+			})
 
-		let value = await USER.validatePassword(password, USER.mec_pwd);
+	// TODO: password checking when password encryptation done with Argon2
+		// let value = await USER.validatePassword(password, USER.mec_pwd);
 
-		if (!value) {
-			res.status(200).send({
-				code: "error",
-				header: "Wrong password",
-				message:
-					"The password you introduced is incorrect, please try again or try to recover your password.",
-			});
-		} else {
-			const token = signToken(USER.id);
+		// if (!value) {
+		// 	res.status(200).send({
+		// 		code: "error",
+		// 		header: "Wrong password",
+		// 		message:
+		// 			"The password you introduced is incorrect, please try again or try to recover your password.",
+		// 	});
+		// } else {
+			const accessToken = signToken(user.id);
+			const refreshToken = signRefreshToken(user.id);
 			res.status(200).send({
 				code: "success",
 				header: "Welcome back",
 				message: "We are redirecting you to your account.",
-				token,
+				"access-token": accessToken,
+				"refresh-token": refreshToken
 			});
-		}
+
 	} catch (err) {
 		console.log(err);
 		res.status(500).send({
