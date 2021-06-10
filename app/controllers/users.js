@@ -1,11 +1,11 @@
 // External modules
 const JWT = require("jsonwebtoken");
+const argon2 = require('argon2');
 // const utils = require("./../utils/utils");
 
 // Internal modules
 const db = require("../models/index");
-const User = db.initModels.user;
-//const Op = db.Sequelize.Op;
+const User = db.initModels.user; 
 
 const signToken = (userid) => {
 	const maxAge = "15m";   //"2m";
@@ -75,15 +75,13 @@ exports.getUser = async (req, res) => {
 		res.status(400).send("Request is empty.");
 	} 
 	try {
-		console.log('***** IM HERE ****')
-		const user = await db.initModels.user.findOne({ where: { id: req.body.id } });
+		const user = await User.findOne({ where: { id: req.body.id } });
 		if (user === null) {
 		  res.status(204).json({
 			success: "false",
 			message: "user not found"
 		});
 		} else {
-			console.log(user);
 			res.status(200).json({
 				success: "true",
 				name: user.name,
@@ -98,11 +96,12 @@ exports.getUser = async (req, res) => {
 	}
 };
 
-//Create user (FOR TESTING PURPOSE)
+//Create user 
 exports.createUser = async(req, res) => {
 	try {
-	const {name, lastnames} = req.body;
-	const newUser = await db.initModels.user.create({ name: name, lastnames: lastnames, user_status_id: 1, user_role_id: 1});
+	const {name, lastnames, password} = req.body;
+	const hashedPassword = await argon2.hash(password);
+	const newUser = await User.create({ name: name, lastnames: lastnames, password: hashedPassword, user_status_id: 1, user_role_id: 1});
 	res.status(200).json({
 		success: "true",
 		user_id: newUser.id,
@@ -120,7 +119,7 @@ exports.createUser = async(req, res) => {
 //get all users (FOR TESTING PURPOSE)
 exports.getAllUsers = async(req, res) => {
 	try {
-	const users = await db.initModels.user.findAll();	
+	const users = await User.findAll();	
 	res.status(200).json(users);
 	} catch (err) {
 		console.error(err);
@@ -129,6 +128,66 @@ exports.getAllUsers = async(req, res) => {
 		});
 	}
 }  
+
+// Login
+exports.login = async (req, res) => {
+	const name = req.body.name;
+	const email = req.body.username;
+	const password = req.body.password;
+	// Check that the request isn't empty
+	if (!email || !password) {
+		res.status(400).send({
+			code: "error",
+			message: "Content can not be empty!",
+		});
+		return;
+	}
+
+	try {
+		const USER = await db.mec_user.findOne({
+			attributes: ["id", "mec_pwd"],
+			where: db.sequelize.where(
+				db.sequelize.fn("lower", db.sequelize.col("mec_un")),
+				db.sequelize.fn("lower", email)
+			),
+		});
+
+		if (!USER) {
+			res.status(200).send({
+				code: "error",
+				header: "User doesn't exist",
+				message: "There's no user with that email, please try again or get in touch.",
+			});
+			return;
+		}
+
+		let value = await USER.validatePassword(password, USER.mec_pwd);
+
+		if (!value) {
+			res.status(200).send({
+				code: "error",
+				header: "Wrong password",
+				message:
+					"The password you introduced is incorrect, please try again or try to recover your password.",
+			});
+		} else {
+			const token = signToken(USER.id);
+			res.status(200).send({
+				code: "success",
+				header: "Welcome back",
+				message: "We are redirecting you to your account.",
+				token,
+			});
+		}
+	} catch (err) {
+		console.log(err);
+		res.status(500).send({
+			code: "error",
+			message: err.message || "Some error ocurred while retrieving your account.",
+		});
+	}
+};
+
 /* // Get user
 exports.getUser = async (req, res) => {
 	// Check that the request isn't empty
@@ -172,50 +231,6 @@ exports.getUser = async (req, res) => {
 		});
 	}
 }; */
-
-// Update user
-exports.deleteUser = async (req, res) => {
-	// Check that the request isn't empty
-	if (!req.user) {
-		res.status(404).send("User not found.");
-	}
-	try {
-		const userModel = await db.mec_user.findOne({
-			raw: true,
-			nest: true,
-			attributes: {
-				exclude: ["mec_pwd", "password_change"],
-			},
-			include: [
-				{
-					model: db.profile,
-					attributes: ["id"],
-				},
-				{
-					model: db.mecuser_people,
-				},
-				{model: db.people},
-			],
-			where: {id: req.user.uid},
-		});
-
-		if (userModel) {
-			if (userModel.person.picture) {
-				userModel.person.picture = Buffer.from(userModel.person.picture).toString("base64");
-			}
-			res.status(200).json(userModel);
-		} else {
-			res.status(404).json({
-				message: "User not found.",
-			});
-		}
-	} catch (err) {
-		console.error(err);
-		res.status(500).send({
-			message: err.message || "Some error ocurred while retrieving your account.",
-		});
-	}
-};
 
 // Delete user
 exports.deleteUser = async (req, res) => {
@@ -261,7 +276,7 @@ exports.deleteUser = async (req, res) => {
 	}
 };
 
-// Get user
+/* // Get user
 exports.login = async (req, res) => {
 	const email = req.body.username;
 	const password = req.body.password;
@@ -310,7 +325,7 @@ exports.login = async (req, res) => {
 			message: err.message || "Some error ocurred while retrieving your account.",
 		});
 	}
-};
+}; */
 
 exports.forgetPassword = async (req, res) => {
 	const {email} = req.body;
