@@ -9,6 +9,7 @@
         "url": "https://opensource.org/licenses/MIT"
       }
     },
+    "filesPattern": "../routes/*.js",
     "servers": [
       {
         "url": "/",

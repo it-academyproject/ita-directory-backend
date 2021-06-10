@@ -5,9 +5,10 @@ const cors = require("cors");
 const JwtStrategy = require("./middleware/verifyToken");
 // const passport = require("passport");
 const helmet = require("helmet");
-const swaggerUi = require("swagger-ui-express");
-const swaggerDocument = require("./utils/swagger.json");
-
+// const swaggerUi = require("swagger-ui-express");
+// const swaggerDocument = require("./utils/swagger.json");
+const expressJSDocSwagger = require('express-jsdoc-swagger');
+const options= require("./utils/swaggerOptions")
 const db = require("./models");
 const userRoutes = require("./routes/users");
 
@@ -36,7 +37,8 @@ app.use(helmet());
 app.use(express.json({limit: "50mb", type: "application/json"}));
 
 // API
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+expressJSDocSwagger(app)(options);
+// app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Simple, initial route
 app.get("/", (req, res) => {
