@@ -32,13 +32,17 @@ router.post('/', UsersController.createUser);
 //Read All Users (for testing purpose)
 router.get('/', UsersController.getAllUsers);
 
-/* router.post("/v1/login", UsersController.login);
+//Refresh-token
+router.get('/v1/refresh-token', UsersController.getRefreshToken);
 
-// router.post(
-// 	"/v1/update-password",
-// 	// passport.authenticate("jwt", { session: false }),
-// 	UsersController.updatePassword
-// );
+
+router.post("/v1/login", UsersController.login);
+
+/*router.post(
+	"/v1/update-password",
+	// passport.authenticate("jwt", { session: false }),
+	UsersController.updatePassword
+);
 
 // router.post("/v1/register", UsersController.updatePassword);
 
