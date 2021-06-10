@@ -4,6 +4,7 @@ var _recover_password = require("./recover_password");
 var _user = require("./user");
 var _user_role = require("./user_role");
 var _user_status = require("./user_status");
+const argon2 = require('argon2');
 
 function initModels(sequelize) {
   var access_log = _access_log(sequelize, DataTypes);
@@ -21,6 +22,16 @@ function initModels(sequelize) {
   user.belongsTo(user_status, { as: "user_status", foreignKey: "user_status_id"});
   user_status.hasMany(user, { as: "users", foreignKey: "user_status_id"});
 
+  user.addHook('beforeCreate', async(user, options)=> {
+    const hashedPassword = await argon2.hash(user.password,
+      { type: argon2.argon2id,
+        memoryCost: 15360,
+        timeCost: 2,
+        parallelism: 1
+      })        
+    user.password = hashedPassword; 
+  })
+    
   return {
     access_log,
     recover_password,
