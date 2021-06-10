@@ -100,8 +100,7 @@ exports.getUser = async (req, res) => {
 exports.createUser = async(req, res) => {
 	try {
 	const {name, lastnames, password} = req.body;
-	const hashedPassword = await argon2.hash(password);
-	const newUser = await User.create({ name: name, lastnames: lastnames, password: hashedPassword, user_status_id: 1, user_role_id: 1});
+	const newUser = await User.create({ name: name, lastnames: lastnames, password: password, user_status_id: 1, user_role_id: 1});
 	res.status(200).json({
 		success: "true",
 		user_id: newUser.id,
