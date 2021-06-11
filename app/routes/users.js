@@ -77,6 +77,8 @@ router.post("/v1/recover-password", UsersController.receiveEmailGetToken);
 router.get("/v1/change-password/:token", UsersController.recoverPassword);
 router.post("/v1/change-password", UsersController.changePassword);
 
+router.patch("/v1/user", UsersController.updateUserStatus);
+
 // router.get("/v1/user", UsersController.getUser);
 // router.patch("/v1/user", UsersController.getUser);
 

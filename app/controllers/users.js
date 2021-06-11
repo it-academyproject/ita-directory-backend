@@ -500,6 +500,40 @@ exports.changePassword = async (req, res) => {
 	}
 }
 
+exports.updateUserStatus = async (req, res) => {
+
+	const User_status = db.initModels.user_status;
+	const userStatusArray = await User_status.findAll({attributes: ['id', 'name'], raw: true});
+	const userStatus = {};
+	userStatusArray.forEach(item => userStatus[item.name] = item.id);
+	
+	const userStatusName = req.body.userStatus;
+	const userStatusId = userStatus[userStatusName];
+	const userId = req.body.id;
+	
+	if (userId == undefined) return res.status(400).json(apiResponse({ message: 'Missing user id in the request'}));
+	try {
+		const user = await User.findOne({ where: { id: userId } });
+		if (user === null) {
+		  res.status(404).json(apiResponse({ message: "User not found" }))
+		} else {
+			if (userStatusName == undefined || !userStatusId) {
+				return res.status(400).json(apiResponse({ message: "User status not valid" }))
+			}
+			await User.update({user_status_id: userStatusId}, { where: { id : userId } });
+			const updatedUser = await User.findOne({ where: { id: userId } });
+			res.status(200).json(apiResponse({ message: "User updated", data: updatedUser }))
+		}
+	} catch (err) {
+		console.error(err);
+		res.status(500).json(apiResponse({
+			message: "Some error ocurred while updating your account.",
+			error: [err.message]
+		}))
+	}
+}
+
+
 // exports.updatePassword = async (req, res) => {
 // 	const uemail = req.body.email;
 // 	const upwd = req.body.password;
