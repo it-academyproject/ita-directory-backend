@@ -1,18 +1,18 @@
-const passport = require("passport-jwt");
+const jwt = require('jsonwebtoken');
 
-const opt = {
-	jwtFromRequest: passport.ExtractJwt.fromAuthHeaderAsBearerToken(),
-	secretOrKey: process.env.JWT_SECRET,
-	ignoreExpiration: false,
-};
-
-const JwtStrategy = new passport.Strategy(opt, async (payload, done) => {
-	try {
-		return done(null, payload.sub);
-	} catch (err) {
-		console.log(err);
-		return done(err, false);
-	}
-});
-
-module.exports = JwtStrategy;
+module.exports = authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    if(typeof authHeader !== 'undefined') {
+        const token = authHeader && authHeader.split(' ')[1]
+        if (token == null) return res.sendStatus(401);
+        jwt.verify(token, process.env.JWT_SECRET, (err, authData) => {
+            //console.log(err.message);
+            if (err) return res.status(401).send({
+                code: "error",
+                message: "Token has expired!",
+            });
+            req.authData = authData;
+            next()
+        })
+    } else res.sendStatus(403);
+}
