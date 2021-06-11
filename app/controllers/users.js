@@ -1,14 +1,14 @@
 // External modules
 const JWT = require("jsonwebtoken");
 const argon2 = require('argon2');
-// const utils = require("./../utils/utils");
 
 // Internal modules
 const db = require("../models/index");
 const User = db.initModels.user; 
+const apiResponse = require("./../utils/utils").apiResponse;
 
-const signToken = (userid) => {
-	const maxAge = "15m";   //"2m";
+const signToken = (userid, maxAge = "15m") => {
+	// const maxAge = "15m";   //"2m";
 	return JWT.sign(
 		{
 			iss: "itacademy",
@@ -21,8 +21,8 @@ const signToken = (userid) => {
 	);
 };
 
-const signRefreshToken = (userid) => {
-	const maxAge = "1d";	//"4m";
+const signRefreshToken = (userid, maxAge = "1d") => {
+	// const maxAge = "1d";	//"4m";
 	return JWT.sign(
 		{
 			iss: "itacademy",
@@ -370,87 +370,173 @@ exports.forgetPassword = async (req, res) => {
 	}
 };
 
-exports.recoveryPassword = async (req, res) => {
+// - El usuario olvida su contraseña.
+// - El usuario pincha en un enlace. Se le solicita el email.
+// - Tu recibes el email, compruebas que el usuario existe.
+// - Si existe generas un token y un expiry_date de una hora, así le das una hora para que responda a un email que le vas a enviar. (ese email no se lo envias por el momento).
+// - El usuario entonces recibe un email, con un enlace a miweb.com/recover-password
+// - Desde ahí se hace una petición GET con el hash que has generado, eso lo recibes como un query-parameter.
+// - Compruebas si el hash pertenece al usuario y esta dentro del tiempo permitido. Si es así le das permiso para que cambie la contraseña.
+// - Recibes la contraseña.
+// - Actualizas la BD
+exports.receiveEmailGetToken = async (req, res) => {
 	try {
-		const {user} = req;
-		const {password} = req.body;
-		console.log("recoveryPass", user);
-		const mecUser = await db.mec_user.findOne({
-			where: {mec_un: user.email},
+		const { user } = req.body
+	
+		const passUser = await User.findOne({
+			where: {
+				email: user
+			}
 		});
-		if (mecUser) {
-			mecUser.mec_pwd = await mecUser.generateHash(password);
-			await mecUser.save();
-			await db.password_recovery_log.update(
-				{
-					recovery_active: false,
-					password_new: mecUser.mec_pwd,
-					recovery_date: new Date(),
-				},
-				{
-					where: {
-						id_mec_user: mecUser.id,
-						recovery_active: true,
-					},
-				}
+	
+		// console.log(passUser);
+		if (passUser) {
+			const accessToken = signToken(passUser, "1h");
+	
+			res.status(200).json(
+				apiResponse({
+					message: "Access token granted.",
+					data: accessToken
+				})
 			);
-			res.status(200).json({
-				code: "success",
-				header: "Recovery Pass succesful url temp",
-				message: "You have succesfuly update Pass succesful.",
-			});
 		} else {
-			res.status(404).send({
-				code: "not-found",
-				header: "user",
-				message: "User not found.",
-			});
+			res.status(404).json(
+				apiResponse({
+					message: "User not found."
+				})
+			);
 		}
 	} catch (err) {
 		console.log(err);
-		res.status(500).send({
-			message: err.message || "Some error ocurred.",
-		});
+		res.status(500).json(
+			apiResponse({
+				message: "An error occurred with your query.",
+				errors: err.message
+			})
+		);
 	}
-};
+}
 
-exports.updatePassword = async (req, res) => {
-	const uemail = req.body.email;
-	const upwd = req.body.password;
-	// Validate request
-	if (!uemail || !upwd) {
-		res.status(400).send({
-			code: "error",
-			message: "You need to write your email and password.",
-		});
-		return;
-	}
-
+exports.recoverPassword = async (req, res) => {
 	try {
-		const USER = await db.mec_user.findOne({where: {mec_un: uemail}});
+		const token = req.params.token;
 
-		if (!USER) {
-			res.status(200).send({
-				code: "error",
-				message: "There's no user with that email.",
-			});
-			return;
+		if (!token) {
+			res.status(401).json(
+				apiResponse({
+					message: "Your token is empty."
+				})
+			);
 		}
 
-		// Update password
-		let new_pass = db.mec_user.prototype.generateHash(upwd);
-		USER.mec_pwd = new_pass;
-		await USER.save();
+		JWT.verify(
+			token, process.env.JWT_SECRET, 
+			(err, authData) => {
+				if (err) {
+					res.status(401).json(
+						apiResponse({
+							message: "Your token has expired!",
+							errors: err.message
+						})
+					);
+				}
 
-		res.status(200).send({
-			code: "success",
-			message: "Your password has been updated succesfuly.",
-		});
+				res.status(200).json(
+					apiResponse({
+						message: "Authorization granted to change your password."
+					})
+				)
+			}
+		);
+
 	} catch (err) {
 		console.log(err);
-		res.status(500).send({
-			code: "error",
-			message: err.message || "Some error ocurred while retrieving your account.",
-		});
+		res.status(500).json(
+			apiResponse({
+				message: "An error ocurred.",
+				errors: err.message
+			})
+		);
 	}
 };
+
+exports.changePassword = async (req, res) => {
+	try {
+		const { password, user } = req.body;
+		
+		// Create hook for update password?
+		const hashedPassword = await argon2.hash(
+			password,
+			{ 
+				type: argon2.argon2id,
+				memoryCost: 15360,
+				timeCost: 2,
+				parallelism: 1
+			}
+		);
+
+		const passUser = await User.findOne({
+			where: {
+				email: user
+			}
+		});
+
+		passUser.password = hashedPassword;
+		passUser.save();
+
+		res.status(200).json(
+			apiResponse({
+				message: "You password has been successfully changed."
+			})
+		);
+
+	} catch (err) {
+		res.status(500).json(
+			apiResponse({
+				message: "An error occurred.",
+				errors: err.message
+			})
+		);
+	}
+}
+
+// exports.updatePassword = async (req, res) => {
+// 	const uemail = req.body.email;
+// 	const upwd = req.body.password;
+// 	// Validate request
+// 	if (!uemail || !upwd) {
+// 		res.status(400).send({
+// 			code: "error",
+// 			message: "You need to write your email and password.",
+// 		});
+// 		return;
+// 	}
+
+// 	try {
+// 		const USER = await db.mec_user.findOne({where: {mec_un: uemail}});
+
+// 		if (!USER) {
+// 			res.status(200).send({
+// 				code: "error",
+// 				message: "There's no user with that email.",
+// 			});
+// 			return;
+// 		}
+
+// 		// Update password
+// 		let new_pass = db.mec_user.prototype.generateHash(upwd);
+// 		USER.mec_pwd = new_pass;
+// 		await USER.save();
+
+// 		res.status(200).send({
+// 			code: "success",
+// 			message: "Your password has been updated succesfuly.",
+// 		});
+// 	} catch (err) {
+// 		console.log(err);
+// 		res.status(500).send({
+// 			code: "error",
+// 			message: err.message || "Some error ocurred while retrieving your account.",
+// 		});
+// 	}
+// };
