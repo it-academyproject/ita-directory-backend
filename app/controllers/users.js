@@ -1,6 +1,7 @@
 // External modules
 const JWT = require("jsonwebtoken");
 const argon2 = require('argon2');
+const Hashids = require('hashids');
 
 // Internal modules
 const db = require("../models/index");
@@ -8,12 +9,13 @@ const User = db.initModels.user;
 const apiResponse = require("./../utils/utils").apiResponse;
 
 const signToken = (userid, maxAge = "15m") => {
-	// const maxAge = "15m";   //"2m";
+	const hashids = new Hashids(process.env.JWT_SECRET, 10);
+	const hashedId = hashids.encode(userid);
 	return JWT.sign(
 		{
 			iss: "itacademy",
 			sub: {
-				user_id: userid,
+				user_id: hashedId,
 			}
 		},
 		process.env.JWT_SECRET,
@@ -22,12 +24,13 @@ const signToken = (userid, maxAge = "15m") => {
 };
 
 const signRefreshToken = (userid, maxAge = "1d") => {
-	// const maxAge = "1d";	//"4m";
+	const hashids = new Hashids(process.env.REFRESH_TOKEN_SECRET, 10);
+	const hashedId = hashids.encode(userid);
 	return JWT.sign(
 		{
 			iss: "itacademy",
 			sub: {
-				user_id: userid,
+				user_id: hashedId,
 			}
 		},
 		process.env.JWT_REFRESH_TOKEN_SECRET,
