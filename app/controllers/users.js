@@ -1,6 +1,7 @@
 // External modules
 const JWT = require("jsonwebtoken");
 const argon2 = require('argon2');
+const Hashids = require('hashids');
 
 // Internal modules
 const db = require("../models/index");
@@ -8,12 +9,13 @@ const User = db.initModels.user;
 const apiResponse = require("./../utils/utils").apiResponse;
 
 const signToken = (userid, maxAge = "15m") => {
-	// const maxAge = "15m";   //"2m";
+	const hashids = new Hashids(process.env.JWT_SECRET, 10);
+	const hashedId = hashids.encode(userid);
 	return JWT.sign(
 		{
 			iss: "itacademy",
 			sub: {
-				user_id: userid,
+				user_id: hashedId,
 			}
 		},
 		process.env.JWT_SECRET,
@@ -22,12 +24,13 @@ const signToken = (userid, maxAge = "15m") => {
 };
 
 const signRefreshToken = (userid, maxAge = "1d") => {
-	// const maxAge = "1d";	//"4m";
+	const hashids = new Hashids(process.env.REFRESH_TOKEN_SECRET, 10);
+	const hashedId = hashids.encode(userid);
 	return JWT.sign(
 		{
 			iss: "itacademy",
 			sub: {
-				user_id: userid,
+				user_id: hashedId,
 			}
 		},
 		process.env.JWT_REFRESH_TOKEN_SECRET,
@@ -499,6 +502,40 @@ exports.changePassword = async (req, res) => {
 		);
 	}
 }
+
+exports.updateUserStatus = async (req, res) => {
+
+	const User_status = db.initModels.user_status;
+	const userStatusArray = await User_status.findAll({attributes: ['id', 'name'], raw: true});
+	const userStatus = {};
+	userStatusArray.forEach(item => userStatus[item.name] = item.id);
+	
+	const userStatusName = req.body.userStatus;
+	const userStatusId = userStatus[userStatusName];
+	const userId = req.body.id;
+	
+	if (userId == undefined) return res.status(400).json(apiResponse({ message: 'Missing user id in the request'}));
+	try {
+		const user = await User.findOne({ where: { id: userId } });
+		if (user === null) {
+		  res.status(404).json(apiResponse({ message: "User not found" }))
+		} else {
+			if (userStatusName == undefined || !userStatusId) {
+				return res.status(400).json(apiResponse({ message: "User status not valid" }))
+			}
+			await User.update({user_status_id: userStatusId}, { where: { id : userId } });
+			const updatedUser = await User.findOne({ where: { id: userId } });
+			res.status(200).json(apiResponse({ message: "User updated", data: updatedUser }))
+		}
+	} catch (err) {
+		console.error(err);
+		res.status(500).json(apiResponse({
+			message: "Some error ocurred while updating your account.",
+			error: [err.message]
+		}))
+	}
+}
+
 
 // exports.updatePassword = async (req, res) => {
 // 	const uemail = req.body.email;
