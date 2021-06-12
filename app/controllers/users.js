@@ -187,6 +187,37 @@ exports.login = async (req, res) => {
 	}
 };
 
+//Update role to user with id_user & id_role (FOR TESTING PURPOSE)
+exports.updateUserRole = async(req, res) => {
+	if (!req.body) {
+		res.status(400).send("Request is empty.");
+	} 
+	try {
+		const user = await User.update({user_role_id: req.body.user_role_id},{ where: { id: req.body.user_id } });
+		if (user === null) {
+		  res.status(204).json({
+			success: "false",
+			message: "user not found"
+		});
+		} else {
+			//make update & return data
+
+			res.status(200).json({
+				success: "true",
+				name: user.name,
+				lastnames: user.lastnames,
+				user_role_id: user.user_role_id
+			});
+		}
+	} catch (err) {
+		console.error(err);
+		res.status(500).send({
+			message: err.message || "Some error ocurred while retrieving your account.",
+		});
+	}
+};
+  
+
 /* // Get user
 exports.getUser = async (req, res) => {
 	// Check that the request isn't empty

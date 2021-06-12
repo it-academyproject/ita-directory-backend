@@ -38,6 +38,9 @@ router.get('/v1/refresh-token', UsersController.getRefreshToken);
 
 router.post("/v1/login", UsersController.login);
 
+//Update Role to User
+router.patch("/", UsersController.updateUserRole);
+
 /*router.post(
 	"/v1/update-password",
 	// passport.authenticate("jwt", { session: false }),
