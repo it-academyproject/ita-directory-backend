@@ -69,7 +69,7 @@ router.patch("/", UsersController.updateUserRole);
 	"/v1/update-password",
 	// passport.authenticate("jwt", { session: false }),
 	UsersController.updatePassword
-);
+);*/
 
 // router.post("/v1/register", UsersController.updatePassword);
 
