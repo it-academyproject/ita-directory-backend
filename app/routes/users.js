@@ -62,6 +62,8 @@ router.get('/v1/refresh-token', UsersController.getRefreshToken);
  */
 router.post("/v1/login", UsersController.login);
 
+//Update Role to User
+router.patch("/", UsersController.updateUserRole);
 /**
  * RecoverPassword data
  * @typedef {object} userRecoverData 
@@ -94,7 +96,7 @@ router.post("/v1/login", UsersController.login);
 // 	"/v1/update-password",
 // 	// passport.authenticate("jwt", { session: false }),
 // 	UsersController.updatePassword
-// );
+// );*/
 
 // router.post("/v1/register", UsersController.updatePassword);
 
