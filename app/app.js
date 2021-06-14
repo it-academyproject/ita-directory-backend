@@ -11,6 +11,7 @@ const expressJSDocSwagger = require('express-jsdoc-swagger');
 const options= require("./utils/swaggerOptions")
 const db = require("./models");
 const userRoutes = require("./routes/users");
+const constantsRoute = require("./routes/constants");
 
 const authenticateToken = require("./middleware/verifyToken");
 const UsersController = require("./controllers/users");
@@ -56,6 +57,7 @@ app.get("/testToken", authenticateToken, (req, res) => {
 });
 
 // Routes
+app.use("/", constantsRoute);
 app.use("/users", userRoutes);
 
 module.exports = app;

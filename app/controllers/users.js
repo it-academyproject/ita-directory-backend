@@ -6,7 +6,7 @@ const Hashids = require('hashids');
 // Internal modules
 const db = require("../models/index");
 const User = db.initModels.user; 
-const apiResponse = require("./../utils/utils").apiResponse;
+const apiResponse = require("../utils/utils").apiResponse;
 
 const signToken = (userid, maxAge = "15m") => {
 	const hashids = new Hashids(process.env.JWT_SECRET, 10);
@@ -404,15 +404,6 @@ exports.forgetPassword = async (req, res) => {
 	}
 };
 
-// - El usuario olvida su contraseña.
-// - El usuario pincha en un enlace. Se le solicita el email.
-// - Tu recibes el email, compruebas que el usuario existe.
-// - Si existe generas un token y un expiry_date de una hora, así le das una hora para que responda a un email que le vas a enviar. (ese email no se lo envias por el momento).
-// - El usuario entonces recibe un email, con un enlace a miweb.com/recover-password
-// - Desde ahí se hace una petición GET con el hash que has generado, eso lo recibes como un query-parameter.
-// - Compruebas si el hash pertenece al usuario y esta dentro del tiempo permitido. Si es así le das permiso para que cambie la contraseña.
-// - Recibes la contraseña.
-// - Actualizas la BD
 exports.receiveEmailGetToken = async (req, res) => {
 	try {
 		const { user } = req.body
@@ -566,7 +557,6 @@ exports.updateUserStatus = async (req, res) => {
 		}))
 	}
 }
-
 
 // exports.updatePassword = async (req, res) => {
 // 	const uemail = req.body.email;
