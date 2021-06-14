@@ -1,0 +1,57 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = "native"
+}
+
+model user_role {
+  id  Int         @id @default(autoincrement())
+  name    String
+  admin   Boolean
+  manager Boolean
+  registered Boolean
+}
+
+model user_status {
+  id Int          @id @default(autoincrement())
+  name    String
+  active  Boolean
+  pending Boolean
+  suspended Boolean
+  deleted   Boolean
+}
+
+model user {
+  id        Int       @id @default(autoincrement())
+  name      String
+  lastnames String
+  email     String    @uinque
+  password  String
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+  user_status user_status @relation(fields: [user_status_id], references: [id])
+  user_status_id Int
+  user_role user_role     @relation(fields: [user_role_id], references: [id])
+  user_role_id   Int
+  refresh_token  String
+}
+
+model acces_log {
+  id Int          @id @default(autoincrement())
+  login DateTime
+  logout DateTime
+  user user @relation(fields: [user_id], references: [id])
+  user_id Int
+}
+
+model recover_password {
+  id Int          @id @default(autoincrement())
+  hash String
+  expire_time DateTime
+  user user @relation(fields: [user_id], references: [id])
+  user_id Int
+}
