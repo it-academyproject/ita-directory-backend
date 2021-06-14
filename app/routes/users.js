@@ -62,6 +62,34 @@ router.get('/v1/refresh-token', UsersController.getRefreshToken);
  */
 router.post("/v1/login", UsersController.login);
 
+/**
+ * RecoverPassword data
+ * @typedef {object} userRecoverData 
+ * @property {string} email.required - Email of the user
+ * @property {boolean} privacy.required - Accept privacy from user
+ */
+
+/**
+ * POST /v1/recover-password
+ * @summary Allows user recover password
+ * @tags User
+ * @param {userRecoverData} request.body.required - The payload looks like this:
+ * @return {object} 200 - success response - application/json
+ * @return {object} 400 - Bad request response
+ * @example request - Payload example
+ * { "email": "email@example.com", "privacy":true}
+ * @example response - 200 - Example success response
+ * { "status":"200", "message": "email sent successfully"}
+ * @example response - 400 - Example error response
+ * { "errCode":"errCode", "message":"email not found"}
+ */
+
+/*router.post(
+	"/v1/update-password",
+	// passport.authenticate("jwt", { session: false }),
+	UsersController.updatePassword
+);*/
+
 // router.post(
 // 	"/v1/update-password",
 // 	// passport.authenticate("jwt", { session: false }),
