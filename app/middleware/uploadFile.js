@@ -6,12 +6,11 @@ const extToMime = (type) => {
 	return type.indexOf("/") === -1 ? type.split("/")[0] : type;
 };
 
+const date = new Date();
 const storage = multer.diskStorage({
-	destination: (req, file, cb) => {
-		cb(null, `${__dirname}/..${process.env.FOLDER_UPLOADS}`);
-	},
+	destination: `public/${date.getFullYear()}/${date.getMonth()}`,
 	filename: (req, file, cb) => {
-		cb(null, Date.now() + extToMime(file.originalname));
+		cb(null, Date.now() + file.originalname);
 	},
 });
 
@@ -23,4 +22,4 @@ const fileFilter = (req, file, cb) => {
 	}
 };
 
-module.exports = multer({ storage: storage, fileFilter: fileFilter });
+module.exports = multer({storage, fileFilter}).single("image");
