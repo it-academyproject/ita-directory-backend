@@ -17,11 +17,10 @@ CREATE TABLE IF NOT EXISTS `it_academy`.`user` (
   `lastnames` VARCHAR(45) NULL DEFAULT NULL,
   `email` VARCHAR(45) NULL DEFAULT NULL,
   `password` TEXT NULL DEFAULT NULL,
-  `created_at` TIMESTAMP NULL DEFAULT 'CURRENT_TIMESTAMP()',
-  `updated_at` TIMESTAMP NULL DEFAULT 'CURRENT_TIMESTAMP()',
+  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP(),
+  `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP(),
   `user_status_id` INT(11) NOT NULL,
   `user_role_id` INT(11) NOT NULL,
-  `refresh_token` TEXT NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   INDEX `fk_user_user_status_idx` (`user_status_id` ASC) VISIBLE,
   INDEX `fk_user_user_role1_idx` (`user_role_id` ASC) VISIBLE,
@@ -89,6 +88,21 @@ CREATE TABLE IF NOT EXISTS `it_academy`.`recover_password` (
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8;
 
+CREATE TABLE IF NOT EXISTS `it_academy`.`media` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `path` TEXT NULL,
+  `mime_type` VARCHAR(45) NULL,
+  `file_size` VARCHAR(45) NULL,
+  `user_id` INT UNSIGNED NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `fk_media_user1_idx` (`user_id` ASC) VISIBLE,
+  CONSTRAINT `fk_media_user1`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `it_academy`.`user` (`id`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB
+DEFAULT CHARACTER SET = utf8;
 
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;

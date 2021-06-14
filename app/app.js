@@ -11,6 +11,7 @@ const expressJSDocSwagger = require('express-jsdoc-swagger');
 const options= require("./utils/swaggerOptions")
 const db = require("./models");
 const userRoutes = require("./routes/users");
+const path = require("path");
 
 const authenticateToken = require("./middleware/verifyToken");
 const UsersController = require("./controllers/users");
@@ -35,6 +36,10 @@ app.use(
 		extended: true
 	})
 );
+
+//Setting ejs for testing uploadFile routes. To Be Deleted after approval.
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
 
 // Middlewares
 app.use(morgan("dev"));
