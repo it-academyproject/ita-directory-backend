@@ -219,7 +219,32 @@ exports.updateUserRole = async(req, res) => {
 		});
 	}
 };
-  
+
+
+//Update some user field with id_user & newfield (FOR TESTING PURPOSE)
+exports.updateUser = async(req, res) => {
+	
+	try {
+		const user = await User.update({...req.body},{where: {id: req.body.user_id}});
+		
+		if (user === null) {
+		  res.status(204).json({
+			success: "false",
+			message: "user not found"
+		});
+		} else {
+			// return data
+			res.status(200).json({
+				success: "true"				
+			});
+		}
+	} catch (err) {
+		console.error(err);
+		res.status(500).send({
+			message: err.message || "Some error ocurred while retrieving your account.",
+		});
+	}
+};
 
 /* // Get user
 exports.getUser = async (req, res) => {
