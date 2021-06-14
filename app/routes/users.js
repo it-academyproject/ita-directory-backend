@@ -2,6 +2,7 @@ const path = require("path");
 
 const router = require("express").Router();
 const UsersController = require("./../controllers/users");
+const uploadFile = require("./../middleware/uploadFile");
 
 router.get('/v1/get_me', UsersController.getUser);
 
@@ -112,4 +113,12 @@ router.patch("/v1/user", UsersController.updateUserStatus);
 // router.get("/v1/user", UsersController.getUser);
 // router.patch("/v1/user", UsersController.getUser);
 
+
+//Routes for testing UploadFile middleware. To Be deleted after approval.
+router.get("/upload", (req, res) => {
+	res.render("index");
+});
+router.post("/upload", uploadFile, (req, res) => {
+	res.send("file uploaded");
+});
 module.exports = router;
