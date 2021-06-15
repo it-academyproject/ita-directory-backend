@@ -66,7 +66,7 @@ app.get("/", (req, res) => {
 
 app.get("/getToken", UsersController.getToken);
 app.get("/testToken", authenticateToken, (req, res) => {
-	res.json({message: "Correct Token !"});
+	res.json({message: "Correct Token !", data: {"user_id": req.userId} });
 });
 
 // Routes
