@@ -1,74 +1,64 @@
 // External modules
 const JWT = require("jsonwebtoken");
 const argon2 = require('argon2');
+const client = require('../utils/initRedis');
+const { promisify } = require("util");
 const Hashids = require('hashids');
 
 // Internal modules
 const db = require("../models/index");
 const User = db.initModels.user; 
-const apiResponse = require("./../utils/utils").apiResponse;
-
-const signToken = (userid, maxAge = "15m") => {
-	const hashids = new Hashids(process.env.JWT_SECRET, 10);
-	const hashedId = hashids.encode(userid);
-	return JWT.sign(
-		{
-			iss: "itacademy",
-			sub: {
-				user_id: hashedId,
-			}
-		},
-		process.env.JWT_SECRET,
-		{ expiresIn: maxAge }
-	);
-};
-
-const signRefreshToken = (userid, maxAge = "1d") => {
-	const hashids = new Hashids(process.env.REFRESH_TOKEN_SECRET, 10);
-	const hashedId = hashids.encode(userid);
-	return JWT.sign(
-		{
-			iss: "itacademy",
-			sub: {
-				user_id: hashedId,
-			}
-		},
-		process.env.JWT_REFRESH_TOKEN_SECRET,
-		{ expiresIn: maxAge }
-	);
-}
+const { apiResponse, signToken, signRefreshToken } = require("../utils/utils");
 
 // Refresh token
 exports.getRefreshToken = (req, res) => {
 	let { refreshToken } = req.body
-    if (!refreshToken) return res.status(400).send({
-		success: "false",
-		message: "refresh token missing"
-	});
+    if (!refreshToken) return res.status(400).json(apiResponse({ message: "refresh token missing" }));
 	JWT.verify(refreshToken, process.env.JWT_REFRESH_TOKEN_SECRET,
-        (err, payload) => {
-          if (err) return res.sendStatus(401);
-		  const accessToken = signToken(payload.sub.user_id);
-		  refreshToken = signRefreshToken(payload.sub.user_id);
-		  res.status(200).send({
-			accessToken: accessToken,
-			refreshToken: refreshToken 
-		  })
+		async (err, payload) => {
+			try {
+				if (err) return res.sendStatus(401);
+				const hashedId = payload.sub.user_id;
+				const get = promisify(client.get).bind(client)
+				const result = await get(hashedId);
+				if (refreshToken !== result) return res.sendStatus(401);
+				const hashids = new Hashids(process.env.HASH_ID_SECRET, 10);
+				const dehashedId = hashids.decode(hashedId);
+            	const userId = dehashedId[0];
+				const accessToken = signToken(userId);
+				refreshToken = await signRefreshToken(userId);
+				res.status(200).json(apiResponse({
+					data: { accessToken: accessToken,
+							refreshToken: refreshToken
+					}
+				  }))
+			}
+			catch (err) {
+				res.status(500).json(apiResponse({
+					message: "Internal server error",
+					error: [err.message]
+				}))
+			}
 		})
 }
 
 // Get token
-exports.getToken = (req, res) => {
+exports.getToken = async (req, res) => {
 	const idUser = '100001';
 	const accessToken = signToken(idUser);
-	const refreshToken = signRefreshToken(idUser);
-	res.status(200).send({
-		code: "success",
-		header: "Welcome",
-		message: "Your token",
-		accesstoken: accessToken,
-		refreshToken: refreshToken
-	});
+	try {
+		const refreshToken = await signRefreshToken(idUser);
+			  res.status(200).json(apiResponse({
+				message: "Your token",
+				data: { accessToken: accessToken, refreshToken: refreshToken }
+			  }))
+	}
+	catch (err) {
+		res.status(500).json(apiResponse({
+			message: "Internal server error",
+			error: [err.message]
+		}))
+	}
 }
 
 // Get User (/v1/get_me endPoint)
