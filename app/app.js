@@ -16,13 +16,20 @@ const path = require("path");
 
 const authenticateToken = require("./middleware/verifyToken");
 const UsersController = require("./controllers/users");
+const constantsController = require("./controllers/constants");
+
+let CONSTANTS = {};
 
 // Check the connection with the DB
 db.sequelize
 	.authenticate()
-	.then(() => {
-		console.log("Connection has been established successfully.");
-	})
+	.then(
+		async () => {
+			console.log("Connection has been established successfully.");
+
+			CONSTANTS = await constantsController.loadConstants();
+		}
+	)
 	.catch((err) => {
 		console.error("Unable to connect to the database:", err);
 	});
@@ -53,6 +60,7 @@ expressJSDocSwagger(app)(options);
 
 // Simple, initial route
 app.get("/", (req, res) => {
+	console.log(CONSTANTS);
 	res.json({message: "ITA DIRECTORY API"});
 });
 
