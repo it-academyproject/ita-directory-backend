@@ -63,7 +63,33 @@ router.get('/v1/refresh-token', UsersController.getRefreshToken);
  */
 router.post("/v1/login", UsersController.login);
 
-//Update Role to User
+
+/**
+ * Update data
+ * @typedef {object} userUpdateData 
+ * @property {string} name- name of the user
+ * @property {string} lastnames- lastnames of the user
+ * @property {string} email- Email of the user
+ * @property {string} password - Pwd of the user
+ * @property {integer} user_status_id- Status of the user
+ * @property {integer} user_role_id- Role of the user
+ */
+
+/**
+ * PATCH /v1/user
+ * @summary Allows Update some field to User
+ * @tags User
+ * @param {userUpdateData} request.body.required - The payload looks like this:
+ * @return {object} 200 - success response - application/json
+ * @return {object} 400 - Bad request response
+ * @example request - Payload example
+ * { "email": "email@example.com", "password":"secret", "privacy":true}
+ * @example response - 200 - Example success response
+ * { "status":"200", "message": "User updated correctly"}
+ * @example response - 400 - Example error response
+ * { "errCode":"errCode", "message":"User not found"}
+ */
+//Update some field to User
 router.patch("/v1/user", UsersController.updateUser);
 
 /**
