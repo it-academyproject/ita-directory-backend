@@ -23,7 +23,7 @@ const db = {};
 // 	}
 // });
 
-const initModels = require('./tables/init-models');
+const initModels = require("./tables/init-models");
 db.initModels = initModels(sequelize);
 
 db.Sequelize = Sequelize;

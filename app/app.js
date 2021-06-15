@@ -7,11 +7,10 @@ const JwtStrategy = require("./middleware/verifyToken");
 const helmet = require("helmet");
 // const swaggerUi = require("swagger-ui-express");
 // const swaggerDocument = require("./utils/swagger.json");
-const expressJSDocSwagger = require('express-jsdoc-swagger');
-const options= require("./utils/swaggerOptions")
+const expressJSDocSwagger = require("express-jsdoc-swagger");
+const options = require("./utils/swaggerOptions");
 const db = require("./models");
 const userRoutes = require("./routes/users");
-const path = require("path");
 
 const authenticateToken = require("./middleware/verifyToken");
 const UsersController = require("./controllers/users");
@@ -33,13 +32,9 @@ app.use(cors());
 app.use(express.json());
 app.use(
 	express.urlencoded({
-		extended: true
+		extended: true,
 	})
 );
-
-//Setting ejs for testing uploadFile routes. To Be Deleted after approval.
-app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "views"));
 
 // Middlewares
 app.use(morgan("dev"));

@@ -1,12 +1,13 @@
 // External modules
 const JWT = require("jsonwebtoken");
-const argon2 = require('argon2');
-const Hashids = require('hashids');
+const argon2 = require("argon2");
+const Hashids = require("hashids");
 
 // Internal modules
 const db = require("../models/index");
-const User = db.initModels.user; 
+const User = db.initModels.user;
 const apiResponse = require("./../utils/utils").apiResponse;
+const {registerSchema} = require("./../utils/utils");
 
 const signToken = (userid, maxAge = "15m") => {
 	const hashids = new Hashids(process.env.JWT_SECRET, 10);
@@ -16,12 +17,13 @@ const signToken = (userid, maxAge = "15m") => {
 			iss: "itacademy",
 			sub: {
 				user_id: hashedId,
-			}
+			},
 		},
 		process.env.JWT_SECRET,
-		{ expiresIn: maxAge }
+		{expiresIn: maxAge}
 	);
 };
+
 
 const signRefreshToken = (userid, maxAge = "1d") => {
 	const hashids = new Hashids(process.env.REFRESH_TOKEN_SECRET, 10);
@@ -31,35 +33,35 @@ const signRefreshToken = (userid, maxAge = "1d") => {
 			iss: "itacademy",
 			sub: {
 				user_id: hashedId,
-			}
+			},
 		},
 		process.env.JWT_REFRESH_TOKEN_SECRET,
-		{ expiresIn: maxAge }
+		{expiresIn: maxAge}
 	);
-}
+};
 
 // Refresh token
 exports.getRefreshToken = (req, res) => {
-	let { refreshToken } = req.body
-    if (!refreshToken) return res.status(400).send({
-		success: "false",
-		message: "refresh token missing"
-	});
-	JWT.verify(refreshToken, process.env.JWT_REFRESH_TOKEN_SECRET,
-        (err, payload) => {
-          if (err) return res.sendStatus(401);
-		  const accessToken = signToken(payload.sub.user_id);
-		  refreshToken = signRefreshToken(payload.sub.user_id);
-		  res.status(200).send({
+	let {refreshToken} = req.body;
+	if (!refreshToken)
+		return res.status(400).send({
+			success: "false",
+			message: "refresh token missing",
+		});
+	JWT.verify(refreshToken, process.env.JWT_REFRESH_TOKEN_SECRET, (err, payload) => {
+		if (err) return res.sendStatus(401);
+		const accessToken = signToken(payload.sub.user_id);
+		refreshToken = signRefreshToken(payload.sub.user_id);
+		res.status(200).send({
 			accessToken: accessToken,
-			refreshToken: refreshToken 
-		  })
-		})
-}
+			refreshToken: refreshToken,
+		});
+	});
+};
 
 // Get token
 exports.getToken = (req, res) => {
-	const idUser = '100001';
+	const idUser = "100001";
 	const accessToken = signToken(idUser);
 	const refreshToken = signRefreshToken(idUser);
 	res.status(200).send({
@@ -67,29 +69,31 @@ exports.getToken = (req, res) => {
 		header: "Welcome",
 		message: "Your token",
 		accesstoken: accessToken,
-		refreshToken: refreshToken
+		refreshToken: refreshToken,
 	});
-}
+};
 
 // Get User (/v1/get_me endPoint)
 exports.getUser = async (req, res) => {
 	// Check that the request isn't empty
 	if (!req.body) {
 		res.status(400).send("Request is empty.");
-	} 
+	}
 	try {
-		const user = await User.findOne({ where: { id: req.body.id } });
+		const user = await User.findOne({where: {id: req.body.id}});
 		if (user === null) {
-		  res.status(204).json({
-			success: "false",
-			message: "user not found"
-		});
+			res.status(204).json(
+				apiResponse({
+					message: "User not found.",
+				})
+			);
 		} else {
-			res.status(200).json({
-				success: "true",
-				name: user.name,
-				lastnames: user.lastnames
-			});
+			res.status(200).json(
+				apiResponse({
+					message: "Success.",
+					data: {name: user.name, lastnames: user.lastnames},
+				})
+			);
 		}
 	} catch (err) {
 		console.error(err);
@@ -99,37 +103,60 @@ exports.getUser = async (req, res) => {
 	}
 };
 
-//Create user 
-exports.createUser = async(req, res) => {
+//User signup
+exports.registerUser = async (req, res) => {
 	try {
-	const {name, lastnames, password} = req.body;
-	const newUser = await User.create({name: name, lastnames: lastnames, password: password, user_role_id: 3, user_status_id: 2});
-	res.status(200).json({
-		success: "true",
-		user_id: newUser.id,
-		name: newUser.name,
-		lastnames: newUser.lastnames
-	});
+		//Checking if valid email, password and privacy policy.
+		const {name, lastnames, ...userDTO} = req.body;
+		const validFields = await registerSchema.validateAsync(userDTO);
+
+		const doesExist = await User.findOne({where: {email: req.body.email}});
+		if (doesExist !== null) {
+			res.status(400).json(
+				apiResponse({
+					message: "This email has already been registered.",
+					errors: "Invalid email.",
+				})
+			);
+		}
+		const {privacy, ...userDTO2} = req.body;
+		const newUser = await User.create({...req.body});
+		res.status(200).json(
+			apiResponse({
+				message: "User registered correctly.",
+			})
+		);
 	} catch (err) {
+		if (err.isJoi === true) {
+			res.status(422).json(
+				apiResponse({
+					message: "Some error ocurred while creating your account.",
+					errors: err.message,
+				})
+			);
+		}
 		console.error(err);
-		res.status(500).send({
-			message: err.message || "Some error ocurred while retrieving your account.",
-		});
+		res.status(500).json(
+			apiResponse({
+				message: "Some error ocurred while creating your account.",
+				errors: err.message,
+			})
+		);
 	}
-}  
+};
 
 //get all users (FOR TESTING PURPOSE)
-exports.getAllUsers = async(req, res) => {
+exports.getAllUsers = async (req, res) => {
 	try {
-	const users = await User.findAll();	
-	res.status(200).json(users);
+		const users = await User.findAll();
+		res.status(200).json(users);
 	} catch (err) {
 		console.error(err);
 		res.status(500).send({
 			message: err.message || "Some error ocurred while retrieving your account.",
 		});
 	}
-}  
+};
 
 // Login
 exports.login = async (req, res) => {
@@ -191,17 +218,20 @@ exports.login = async (req, res) => {
 };
 
 //Update role to user with id_user & id_role (FOR TESTING PURPOSE)
-exports.updateUserRole = async(req, res) => {
+exports.updateUserRole = async (req, res) => {
 	if (!req.body) {
 		res.status(400).send("Request is empty.");
-	} 
+	}
 	try {
-		const user = await User.update({user_role_id: req.body.user_role_id},{ where: { id: req.body.user_id } });
+		const user = await User.update(
+			{user_role_id: req.body.user_role_id},
+			{where: {id: req.body.user_id}}
+		);
 		if (user === null) {
-		  res.status(204).json({
-			success: "false",
-			message: "user not found"
-		});
+			res.status(204).json({
+				success: "false",
+				message: "user not found",
+			});
 		} else {
 			//make update & return data
 
@@ -209,7 +239,7 @@ exports.updateUserRole = async(req, res) => {
 				success: "true",
 				name: user.name,
 				lastnames: user.lastnames,
-				user_role_id: user.user_role_id
+				user_role_id: user.user_role_id,
 			});
 		}
 	} catch (err) {
@@ -219,7 +249,6 @@ exports.updateUserRole = async(req, res) => {
 		});
 	}
 };
-  
 
 /* // Get user
 exports.getUser = async (req, res) => {
@@ -415,28 +444,28 @@ exports.forgetPassword = async (req, res) => {
 // - Actualizas la BD
 exports.receiveEmailGetToken = async (req, res) => {
 	try {
-		const { user } = req.body
-	
+		const {user} = req.body;
+
 		const passUser = await User.findOne({
 			where: {
-				email: user
-			}
+				email: user,
+			},
 		});
-	
+
 		// console.log(passUser);
 		if (passUser) {
 			const accessToken = signToken(passUser, "1h");
-	
+
 			res.status(200).json(
 				apiResponse({
 					message: "Access token granted.",
-					data: accessToken
+					data: accessToken,
 				})
 			);
 		} else {
 			res.status(404).json(
 				apiResponse({
-					message: "User not found."
+					message: "User not found.",
 				})
 			);
 		}
@@ -445,11 +474,11 @@ exports.receiveEmailGetToken = async (req, res) => {
 		res.status(500).json(
 			apiResponse({
 				message: "An error occurred with your query.",
-				errors: err.message
+				errors: err.message,
 			})
 		);
 	}
-}
+};
 
 exports.recoverPassword = async (req, res) => {
 	try {
@@ -458,37 +487,33 @@ exports.recoverPassword = async (req, res) => {
 		if (!token) {
 			res.status(401).json(
 				apiResponse({
-					message: "Your token is empty."
+					message: "Your token is empty.",
 				})
 			);
 		}
 
-		JWT.verify(
-			token, process.env.JWT_SECRET, 
-			(err, authData) => {
-				if (err) {
-					res.status(401).json(
-						apiResponse({
-							message: "Your token has expired!",
-							errors: err.message
-						})
-					);
-				}
-
-				res.status(200).json(
+		JWT.verify(token, process.env.JWT_SECRET, (err, authData) => {
+			if (err) {
+				res.status(401).json(
 					apiResponse({
-						message: "Authorization granted to change your password."
+						message: "Your token has expired!",
+						errors: err.message,
 					})
-				)
+				);
 			}
-		);
 
+			res.status(200).json(
+				apiResponse({
+					message: "Authorization granted to change your password.",
+				})
+			);
+		});
 	} catch (err) {
 		console.log(err);
 		res.status(500).json(
 			apiResponse({
 				message: "An error ocurred.",
-				errors: err.message
+				errors: err.message,
 			})
 		);
 	}
@@ -496,23 +521,20 @@ exports.recoverPassword = async (req, res) => {
 
 exports.changePassword = async (req, res) => {
 	try {
-		const { password, user } = req.body;
-		
+		const {password, user} = req.body;
+
 		// Create hook for update password?
-		const hashedPassword = await argon2.hash(
-			password,
-			{ 
-				type: argon2.argon2id,
-				memoryCost: 15360,
-				timeCost: 2,
-				parallelism: 1
-			}
-		);
+		const hashedPassword = await argon2.hash(password, {
+			type: argon2.argon2id,
+			memoryCost: 15360,
+			timeCost: 2,
+			parallelism: 1,
+		});
 
 		const passUser = await User.findOne({
 			where: {
-				email: user
-			}
+				email: user,
+			},
 		});
 
 		passUser.password = hashedPassword;
@@ -520,53 +542,53 @@ exports.changePassword = async (req, res) => {
 
 		res.status(200).json(
 			apiResponse({
-				message: "You password has been successfully changed."
+				message: "You password has been successfully changed.",
 			})
 		);
-
 	} catch (err) {
 		res.status(500).json(
 			apiResponse({
 				message: "An error occurred.",
-				errors: err.message
+				errors: err.message,
 			})
 		);
 	}
-}
+};
 
 exports.updateUserStatus = async (req, res) => {
-
 	const User_status = db.initModels.user_status;
-	const userStatusArray = await User_status.findAll({attributes: ['id', 'name'], raw: true});
+	const userStatusArray = await User_status.findAll({attributes: ["id", "name"], raw: true});
 	const userStatus = {};
-	userStatusArray.forEach(item => userStatus[item.name] = item.id);
-	
+	userStatusArray.forEach((item) => (userStatus[item.name] = item.id));
+
 	const userStatusName = req.body.userStatus;
 	const userStatusId = userStatus[userStatusName];
 	const userId = req.body.id;
-	
-	if (userId == undefined) return res.status(400).json(apiResponse({ message: 'Missing user id in the request'}));
+
+	if (userId == undefined)
+		return res.status(400).json(apiResponse({message: "Missing user id in the request"}));
 	try {
-		const user = await User.findOne({ where: { id: userId } });
+		const user = await User.findOne({where: {id: userId}});
 		if (user === null) {
-		  res.status(404).json(apiResponse({ message: "User not found" }))
+			res.status(404).json(apiResponse({message: "User not found"}));
 		} else {
 			if (userStatusName == undefined || !userStatusId) {
-				return res.status(400).json(apiResponse({ message: "User status not valid" }))
+				return res.status(400).json(apiResponse({message: "User status not valid"}));
 			}
-			await User.update({user_status_id: userStatusId}, { where: { id : userId } });
-			const updatedUser = await User.findOne({ where: { id: userId } });
-			res.status(200).json(apiResponse({ message: "User updated", data: updatedUser }))
+			await User.update({user_status_id: userStatusId}, {where: {id: userId}});
+			const updatedUser = await User.findOne({where: {id: userId}});
+			res.status(200).json(apiResponse({message: "User updated", data: updatedUser}));
 		}
 	} catch (err) {
 		console.error(err);
-		res.status(500).json(apiResponse({
-			message: "Some error ocurred while updating your account.",
-			error: [err.message]
-		}))
+		res.status(500).json(
+			apiResponse({
+				message: "Some error ocurred while updating your account.",
+				error: [err.message],
+			})
+		);
 	}
-}
-
+};
 
 // exports.updatePassword = async (req, res) => {
 // 	const uemail = req.body.email;
