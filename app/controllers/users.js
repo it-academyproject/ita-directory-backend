@@ -228,15 +228,18 @@ exports.updateUser = async(req, res) => {
 		const user = await User.update({...req.body},{where: {id: req.body.user_id}});
 		
 		if (user === null) {
-		  res.status(204).json({
-			success: "false",
-			message: "user not found"
-		});
+			res.status(204).json(
+				apiResponse({
+					message: "User not Found."		
+				})
+			)	
 		} else {
 			// return data
-			res.status(200).json({
-				success: "true"				
-			});
+			res.status(200).json(
+				apiResponse({
+				message: "true"
+				})				
+			);
 		}
 	} catch (err) {
 		console.error(err);
