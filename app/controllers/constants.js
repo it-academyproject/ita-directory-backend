@@ -1,16 +1,15 @@
 const apiResponse = require("../utils/utils").apiResponse;
-const {CONSTANTS, loadConstants} = require("./../utils/CONSTANTS");
+const {getConstants, loadConstants} = require("./../utils/CONSTANTS");
 
 async function getConstantsRoute(req, res) {
-	if (CONSTANTS === undefined) {
+	if (getConstants === undefined) {
 		await loadConstants();
 	}
-
 	try {
 		res.status(200).json(
 			apiResponse({
 				message: "Constants fetched correctly.",
-				data: CONSTANTS,
+				data: getConstants(),
 			})
 		);
 	} catch (error) {
