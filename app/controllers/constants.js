@@ -2,7 +2,7 @@ const apiResponse = require("../utils/utils").apiResponse;
 const {getConstants, loadConstants} = require("./../utils/CONSTANTS");
 
 async function getConstantsRoute(req, res) {
-	if (getConstants === undefined) {
+	if (getConstants() === undefined) {
 		await loadConstants();
 	}
 	try {
