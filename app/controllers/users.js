@@ -7,31 +7,37 @@ const Hashids = require('hashids');
 
 // Internal modules
 const db = require("../models/index");
-const User = db.initModels.user; 
+const User = db.initModels.user;
 const { apiResponse, signToken, signRefreshToken } = require("../utils/utils");
 
 // Refresh token
 exports.getRefreshToken = (req, res) => {
 	let { refreshToken } = req.body
-    if (!refreshToken) return res.status(400).json(apiResponse({ message: "refresh token missing" }));
-	JWT.verify(refreshToken, process.env.JWT_REFRESH_TOKEN_SECRET,
+	if (!refreshToken) return res.status(400).json(apiResponse({ message: "refresh token missing" }));
+	JWT.verify(refreshToken, process.env.JWT_REFRESH_TOKEN_SECRET, { ignoreExpiration: true },
 		async (err, payload) => {
 			try {
 				if (err) return res.sendStatus(401);
 				const hashedId = payload.sub.user_id;
-				const get = promisify(client.get).bind(client)
-				const result = await get(hashedId);
-				if (refreshToken !== result) return res.sendStatus(401);
 				const hashids = new Hashids(process.env.HASH_ID_SECRET, 10);
 				const dehashedId = hashids.decode(hashedId);
-            	const userId = dehashedId[0];
+				const userId = dehashedId[0];
+				const get = promisify(client.get).bind(client)
+				const result = await get(userId);
+				if (refreshToken !== result) {
+					const incr = promisify(client.incr).bind(client);
+					const counterKey = `C${userId}`;
+					await incr(counterKey);
+					return res.sendStatus(401);
+				}
 				const accessToken = signToken(userId);
 				refreshToken = await signRefreshToken(userId);
 				res.status(200).json(apiResponse({
-					data: { accessToken: accessToken,
-							refreshToken: refreshToken
+					data: {
+						accessToken: accessToken,
+						refreshToken: refreshToken
 					}
-				  }))
+				}))
 			}
 			catch (err) {
 				res.status(500).json(apiResponse({
@@ -48,10 +54,10 @@ exports.getToken = async (req, res) => {
 	const accessToken = signToken(idUser);
 	try {
 		const refreshToken = await signRefreshToken(idUser);
-			  res.status(200).json(apiResponse({
-				message: "Your token",
-				data: { accessToken: accessToken, refreshToken: refreshToken }
-			  }))
+		res.status(200).json(apiResponse({
+			message: "Your token",
+			data: { accessToken: accessToken, refreshToken: refreshToken }
+		}))
 	}
 	catch (err) {
 		res.status(500).json(apiResponse({
@@ -66,14 +72,14 @@ exports.getUser = async (req, res) => {
 	// Check that the request isn't empty
 	if (!req.body) {
 		res.status(400).send("Request is empty.");
-	} 
+	}
 	try {
 		const user = await User.findOne({ where: { id: req.body.id } });
 		if (user === null) {
-		  res.status(204).json({
-			success: "false",
-			message: "user not found"
-		});
+			res.status(204).json({
+				success: "false",
+				message: "user not found"
+			});
 		} else {
 			res.status(200).json({
 				success: "true",

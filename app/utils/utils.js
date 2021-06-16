@@ -23,29 +23,25 @@ const hashids = new Hashids(process.env.HASH_ID_SECRET, 10);
 **/
 const apiResponse = ({ message = '', data = {}, errors = [] }) => { return { message, data, errors } }
 
-// const signToken = (userid, maxAge = "15m") => {
-const signToken = (userid, maxAge = "2m") => {
+const signToken = (userid, maxAge = "15m") => {
 	const hashedId = hashids.encode(userid);
-	const payload = {iss: "itacademy", sub: { user_id: hashedId	}};
+	const payload = { iss: "itacademy", sub: { user_id: hashedId } };
 	const secret = process.env.JWT_SECRET;
 	const options = { expiresIn: maxAge };
 	return JWT.sign(payload, secret, options);
 }
-	
-// const signRefreshToken = async (userid, maxAge = "1d") => {
-const signRefreshToken = async (userid, maxAge = "4m") => {
+
+// maxAge = "1d" => 86400 must be a number for Redis expiration time
+const signRefreshToken = async (userid, maxAge = 86400) => {
 	const hashedId = hashids.encode(userid);
-	const payload = {iss: "itacademy", sub: { user_id: hashedId	}};
+	const payload = { iss: "itacademy", sub: { user_id: hashedId } };
 	const secret = process.env.JWT_REFRESH_TOKEN_SECRET;
 	const options = { expiresIn: maxAge };
 	const token = JWT.sign(payload, secret, options);
 	const set = promisify(client.set).bind(client);
-	// await set(hashedId, token, 'EX', maxAge);
-	// await set(hashedId, token, 'EX', 24 * 60 * 60);
-	await set(hashedId, token, 'EX', 4 * 60);
+	await set(userid, token, 'EX', maxAge);
 	return token
 }
-	
 
 module.exports = {
 	// generateBlob,
