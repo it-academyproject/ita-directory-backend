@@ -98,7 +98,7 @@ exports.getUser = async (req, res) => {
 exports.createUser = async (req, res) => {
 	try {
 		const {name, lastnames, password} = req.body;
-		const newUser = await User.create({
+		const newUser = await db.user.create({
 			name: name,
 			lastnames: lastnames,
 			password: password,
@@ -197,7 +197,7 @@ exports.updateUserRole = async (req, res) => {
 		res.status(400).send("Request is empty.");
 	}
 	try {
-		const user = await User.update(
+		const user = await db.user.update(
 			{user_role_id: req.body.user_role_id},
 			{where: {id: req.body.user_id}}
 		);
@@ -226,9 +226,25 @@ exports.updateUserRole = async (req, res) => {
 
 //Update some user field with id_user & newfield (FOR TESTING PURPOSE)
 exports.updateUser = async (req, res) => {
+	const {user_id, user_role_id, user_status_id} = req.body;
+	if (!user_id) {
+		res.status(400).json(
+			apiResponse({
+				message: "user_id not defined",
+			})
+		);
+	}
+
+	if (!user_role_id && !user_status_id) {
+		res.status(400).json(
+			apiResponse({
+				message: "undefined values",
+			})
+		);
+	}
+
 	try {
 		const user = await db.user.update({...req.body}, {where: {id: req.body.user_id}});
-
 		if (user === null) {
 			res.status(204).json(
 				apiResponse({
@@ -239,7 +255,7 @@ exports.updateUser = async (req, res) => {
 			// return data
 			res.status(200).json(
 				apiResponse({
-					message: "true",
+					message: "User updated successfully",
 				})
 			);
 		}
@@ -250,50 +266,6 @@ exports.updateUser = async (req, res) => {
 		});
 	}
 };
-
-/* // Get user
-exports.getUser = async (req, res) => {
-	// Check that the request isn't empty
-	if (!req.user) {
-		res.status(404).send("User not found.");
-	}
-	try {
-		const userModel = await db.mec_user.findOne({
-			raw: true,
-			nest: true,
-			attributes: {
-				exclude: ["mec_pwd", "password_change"],
-			},
-			include: [
-				{
-					model: db.profile,
-					attributes: ["id"],
-				},
-				{
-					model: db.mecuser_people,
-				},
-				{model: db.people},
-			],
-			where: {id: req.user.uid},
-		});
-
-		if (userModel) {
-			if (userModel.person.picture) {
-				userModel.person.picture = Buffer.from(userModel.person.picture).toString("base64");
-			}
-			res.status(200).json(userModel);
-		} else {
-			res.status(404).json({
-				message: "User not found.",
-			});
-		}
-	} catch (err) {
-		console.error(err);
-		res.status(500).send({
-			message: err.message || "Some error ocurred while retrieving your account.",
-		});
-	}
-}; */
 
 // Delete user
 exports.deleteUser = async (req, res) => {
@@ -338,57 +310,6 @@ exports.deleteUser = async (req, res) => {
 		});
 	}
 };
-
-/* // Get user
-exports.login = async (req, res) => {
-	const email = req.body.username;
-	const password = req.body.password;
-	// Check that the request isn't empty
-	if (!email || !password) {
-		res.status(400).send({
-			code: "error",
-			message: "email and password compulsory!",
-		});
-		return;
-	}
-
-	try {
-		const user = await User.findOne({ where: { email: email } });
-		if (!user) return res.status(404).send({
-				code: "error",
-				header: "User doesn't exist",
-				message: "There's no user with that email",
-			})
-
-	// TODO: password checking when password encryptation done with Argon2
-		// let value = await USER.validatePassword(password, USER.mec_pwd);
-
-		// if (!value) {
-		// 	res.status(200).send({
-		// 		code: "error",
-		// 		header: "Wrong password",
-		// 		message:
-		// 			"The password you introduced is incorrect, please try again or try to recover your password.",
-		// 	});
-		// } else {
-			const accessToken = signToken(user.id);
-			const refreshToken = signRefreshToken(user.id);
-			res.status(200).send({
-				code: "success",
-				header: "Welcome back",
-				message: "We are redirecting you to your account.",
-				"access-token": accessToken,
-				"refresh-token": refreshToken
-			});
-
-	} catch (err) {
-		console.log(err);
-		res.status(500).send({
-			code: "error",
-			message: err.message || "Some error ocurred while retrieving your account.",
-		});
-	}
-}; */
 
 exports.forgetPassword = async (req, res) => {
 	const {email} = req.body;
@@ -438,13 +359,12 @@ exports.receiveEmailGetToken = async (req, res) => {
 	try {
 		const {user} = req.body;
 
-		const passUser = await User.findOne({
+		const passUser = await db.user.findOne({
 			where: {
 				email: user,
 			},
 		});
 
-		// console.log(passUser);
 		if (passUser) {
 			const accessToken = signToken(passUser, "1h");
 
@@ -523,7 +443,7 @@ exports.changePassword = async (req, res) => {
 			parallelism: 1,
 		});
 
-		const passUser = await User.findOne({
+		const passUser = await db.user.findOne({
 			where: {
 				email: user,
 			},
@@ -542,39 +462,6 @@ exports.changePassword = async (req, res) => {
 			apiResponse({
 				message: "An error occurred.",
 				errors: err.message,
-			})
-		);
-	}
-};
-
-exports.updateUserStatus = async (req, res) => {
-	const userStatusId = req.body?.userStatusId;
-	const userId = req.body?.id;
-
-	// Ambos valores tienen que estar definidos.
-	if (userId === undefined || userStatusId === undefined) {
-		return res.status(400).json(apiResponse({message: "Missing user id in the request"}));
-	}
-
-	if (!CONSTANTS.user_status.findIndex((el) => el.id === userStatusId)) {
-		return res.status(400).json(apiResponse({message: "Not valid user status"}));
-	}
-
-	try {
-		const USER = await db.user.findOne({where: {id: userId}});
-		if (!USER) {
-			res.status(404).json(apiResponse({message: "User not found"}));
-		} else {
-			await USER.update({user_status_id: userStatusId}, {where: {id: userId}});
-			const updatedUser = await USER.findOne({where: {id: userId}});
-			res.status(200).json(apiResponse({message: "User updated", data: USER}));
-		}
-	} catch (err) {
-		console.error(err);
-		res.status(500).json(
-			apiResponse({
-				message: "Some error ocurred while updating your account.",
-				error: [err.message],
 			})
 		);
 	}

@@ -4,12 +4,11 @@ const router = require("express").Router();
 const UsersController = require("./../controllers/users");
 const uploadFile = require("./../middleware/uploadFile");
 
-router.get('/v1/get_me', UsersController.getUser);
-
+router.get("/v1/get_me", UsersController.getUser);
 
 /**
  * Registration data
- * @typedef {object} userRegistrationData 
+ * @typedef {object} userRegistrationData
  * @property {string} email.required - Email of the user
  * @property {string} password.required - Pwd of the user
  * @property {boolean} privacy.required - Accept privacy from user
@@ -31,17 +30,17 @@ router.get('/v1/get_me', UsersController.getUser);
  */
 
 //Create User (for testing purpose)
-router.post('/', UsersController.createUser);
+router.post("/", UsersController.createUser);
 
 //Read All Users (for testing purpose)
-router.get('/', UsersController.getAllUsers);
+router.get("/", UsersController.getAllUsers);
 
 //Refresh-token
-router.get('/v1/refresh-token', UsersController.getRefreshToken);
+router.get("/v1/refresh-token", UsersController.getRefreshToken);
 
 /**
  * Login data
- * @typedef {object} userLoginData 
+ * @typedef {object} userLoginData
  * @property {string} email.required - Email of the user
  * @property {string} password.required - Pwd of the user
  * @property {boolean} privacy.required - Accept privacy from user
@@ -63,10 +62,9 @@ router.get('/v1/refresh-token', UsersController.getRefreshToken);
  */
 router.post("/v1/login", UsersController.login);
 
-
 /**
  * Update data
- * @typedef {object} userUpdateData 
+ * @typedef {object} userUpdateData
  * @property {string} name- name of the user
  * @property {string} lastnames- lastnames of the user
  * @property {string} email- Email of the user
@@ -94,7 +92,7 @@ router.patch("/v1/user", UsersController.updateUser);
 
 /**
  * RecoverPassword data
- * @typedef {object} userRecoverData 
+ * @typedef {object} userRecoverData
  * @property {string} email.required - Email of the user
  * @property {boolean} privacy.required - Accept privacy from user
  */
@@ -114,32 +112,10 @@ router.patch("/v1/user", UsersController.updateUser);
  * { "errCode":"errCode", "message":"email not found"}
  */
 
-/*router.post(
-	"/v1/update-password",
-	// passport.authenticate("jwt", { session: false }),
-	UsersController.updatePassword
-);*/
-
-// router.post(
-// 	"/v1/update-password",
-// 	// passport.authenticate("jwt", { session: false }),
-// 	UsersController.updatePassword
-// );*/
-
-// router.post("/v1/register", UsersController.updatePassword);
-
-// router.post("/forget-password", UsersController.forgetPassword);
-
 router.post("/v1/recover-password", UsersController.receiveEmailGetToken);
 
 router.get("/v1/change-password/:token", UsersController.recoverPassword);
 router.post("/v1/change-password", UsersController.changePassword);
-
-//router.patch("/v1/user", UsersController.updateUserStatus);
-
-// router.get("/v1/user", UsersController.getUser);
-// router.patch("/v1/user", UsersController.getUser);
-
 
 //Routes for testing UploadFile middleware. To Be deleted after approval.
 router.get("/upload", (req, res) => {
