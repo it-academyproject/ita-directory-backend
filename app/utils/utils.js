@@ -1,3 +1,4 @@
+const Joi = require("joi");
 const JWT = require("jsonwebtoken");
 const Hashids = require("hashids");
 const {getRedisClient} = require("../utils/initRedis");
@@ -21,6 +22,12 @@ const hashids = new Hashids(process.env.HASH_ID_SECRET, 10);
 const apiResponse = ({message = "", data = {}, errors = []}) => {
 	return {message, data, errors};
 };
+
+const registerSchema = Joi.object({
+	email: Joi.string().email().required(),
+	password: Joi.string().min(2).required(),
+	privacy: Joi.boolean().valid(true).required(),
+});
 
 // const signToken = (userid, maxAge = "15m") => {
 const signToken = (userid, maxAge = "2m") => {
@@ -47,6 +54,7 @@ const signRefreshToken = async (userid, maxAge = "4m") => {
 module.exports = {
 	// generateBlob,
 	apiResponse,
+	registerSchema,
 	signToken,
 	signRefreshToken,
 };

@@ -1,5 +1,3 @@
-const path = require("path");
-
 const router = require("express").Router();
 const UsersController = require("./../controllers/users");
 const uploadFile = require("./../middleware/uploadFile");
@@ -29,8 +27,8 @@ router.get("/v1/get_me", UsersController.getUser);
  * { "errCode":"errCode", "message":"Failed to register the user"}
  */
 
-//Create User (for testing purpose)
-router.post("/", UsersController.createUser);
+//Register
+router.post("/v1/register", UsersController.registerUser);
 
 //Read All Users (for testing purpose)
 router.get("/", UsersController.getAllUsers);
@@ -117,11 +115,4 @@ router.post("/v1/recover-password", UsersController.receiveEmailGetToken);
 router.get("/v1/change-password/:token", UsersController.recoverPassword);
 router.post("/v1/change-password", UsersController.changePassword);
 
-//Routes for testing UploadFile middleware. To Be deleted after approval.
-router.get("/upload", (req, res) => {
-	res.render("index");
-});
-router.post("/upload", uploadFile, (req, res) => {
-	res.send("file uploaded");
-});
 module.exports = router;

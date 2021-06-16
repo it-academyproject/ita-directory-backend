@@ -1,31 +1,40 @@
 // External modules
 const JWT = require("jsonwebtoken");
 const argon2 = require("argon2");
-const client = require("../utils/initRedis");
-const {promisify} = require("util");
+const {getRedisClient} = require("../utils/initRedis");
 const Hashids = require("hashids");
+const {apiResponse, signToken, signRefreshToken} = require("../utils/utils");
 
 // Internal modules
 const db = require("../models/index");
-const {apiResponse, signToken, signRefreshToken} = require("../utils/utils");
-const {CONSTANTS} = require("../utils/CONSTANTS");
+const {registerSchema} = require("./../utils/utils");
 
 // Refresh token
 exports.getRefreshToken = (req, res) => {
 	let {refreshToken} = req.body;
-	if (!refreshToken) return res.status(400).json(apiResponse({message: "refresh token missing"}));
+
+	if (!refreshToken) {
+		return res.status(400).json(apiResponse({message: "refresh token missing"}));
+	}
+
 	JWT.verify(refreshToken, process.env.JWT_REFRESH_TOKEN_SECRET, async (err, payload) => {
 		try {
-			if (err) return res.sendStatus(401);
+			if (err) {
+				return res.sendStatus(401);
+			}
+
 			const hashedId = payload.sub.user_id;
-			const get = promisify(client.get).bind(client);
-			const result = await get(hashedId);
-			if (refreshToken !== result) return res.sendStatus(401);
+			const result = await getRedisClient().get(hashedId);
+
+			if (refreshToken !== result) {
+				return res.sendStatus(401);
+			}
+
 			const hashids = new Hashids(process.env.HASH_ID_SECRET, 10);
 			const dehashedId = hashids.decode(hashedId);
 			const userId = dehashedId[0];
 			const accessToken = signToken(userId);
-			refreshToken = await signRefreshToken(userId);
+			refreshToken = signRefreshToken(userId);
 			res.status(200).json(
 				apiResponse({
 					data: {accessToken: accessToken, refreshToken: refreshToken},
@@ -47,7 +56,7 @@ exports.getToken = async (req, res) => {
 	const idUser = "100001";
 	const accessToken = signToken(idUser);
 	try {
-		const refreshToken = await signRefreshToken(idUser);
+		const refreshToken = signRefreshToken(idUser);
 		res.status(200).json(
 			apiResponse({
 				message: "Your token",
@@ -94,28 +103,45 @@ exports.getUser = async (req, res) => {
 	}
 };
 
-//Create user
-exports.createUser = async (req, res) => {
+//User signup
+exports.registerUser = async (req, res) => {
 	try {
-		const {name, lastnames, password} = req.body;
-		const newUser = await db.user.create({
-			name: name,
-			lastnames: lastnames,
-			password: password,
-			user_role_id: 3,
-			user_status_id: 2,
-		});
-		res.status(200).json({
-			success: "true",
-			user_id: newUser.id,
-			name: newUser.name,
-			lastnames: newUser.lastnames,
-		});
+		//Checking if valid email, password and privacy policy.
+		const {name, lastnames, ...userDTO} = req.body;
+		const validFields = await registerSchema.validateAsync(userDTO);
+
+		const doesExist = await db.user.findOne({where: {email: req.body.email}});
+		if (doesExist !== null) {
+			res.status(400).json(
+				apiResponse({
+					message: "This email has already been registered.",
+					errors: "Invalid email.",
+				})
+			);
+		}
+		const {privacy, ...userDTO2} = req.body;
+		const newUser = await db.user.create({...req.body});
+		res.status(200).json(
+			apiResponse({
+				message: "User registered correctly.",
+			})
+		);
 	} catch (err) {
+		if (err.isJoi === true) {
+			res.status(422).json(
+				apiResponse({
+					message: "Some error ocurred while creating your account.",
+					errors: err.message,
+				})
+			);
+		}
 		console.error(err);
-		res.status(500).send({
-			message: err.message || "Some error ocurred while retrieving your account.",
-		});
+		res.status(500).json(
+			apiResponse({
+				message: "Some error ocurred while creating your account.",
+				errors: err.message,
+			})
+		);
 	}
 };
 
