@@ -1,76 +1,76 @@
 // External modules
 const JWT = require("jsonwebtoken");
 const argon2 = require("argon2");
+const {getRedisClient} = require("../utils/initRedis");
 const Hashids = require("hashids");
+const {apiResponse, signToken, signRefreshToken} = require("../utils/utils");
 
 // Internal modules
 const db = require("../models/index");
-const User = db.initModels.user;
-const apiResponse = require("./../utils/utils").apiResponse;
 const {registerSchema} = require("./../utils/utils");
-
-const signToken = (userid, maxAge = "15m") => {
-	const hashids = new Hashids(process.env.JWT_SECRET, 10);
-	const hashedId = hashids.encode(userid);
-	return JWT.sign(
-		{
-			iss: "itacademy",
-			sub: {
-				user_id: hashedId,
-			},
-		},
-		process.env.JWT_SECRET,
-		{expiresIn: maxAge}
-	);
-};
-
-
-const signRefreshToken = (userid, maxAge = "1d") => {
-	const hashids = new Hashids(process.env.REFRESH_TOKEN_SECRET, 10);
-	const hashedId = hashids.encode(userid);
-	return JWT.sign(
-		{
-			iss: "itacademy",
-			sub: {
-				user_id: hashedId,
-			},
-		},
-		process.env.JWT_REFRESH_TOKEN_SECRET,
-		{expiresIn: maxAge}
-	);
-};
 
 // Refresh token
 exports.getRefreshToken = (req, res) => {
 	let {refreshToken} = req.body;
-	if (!refreshToken)
-		return res.status(400).send({
-			success: "false",
-			message: "refresh token missing",
-		});
-	JWT.verify(refreshToken, process.env.JWT_REFRESH_TOKEN_SECRET, (err, payload) => {
-		if (err) return res.sendStatus(401);
-		const accessToken = signToken(payload.sub.user_id);
-		refreshToken = signRefreshToken(payload.sub.user_id);
-		res.status(200).send({
-			accessToken: accessToken,
-			refreshToken: refreshToken,
-		});
+
+	if (!refreshToken) {
+		return res.status(400).json(apiResponse({message: "refresh token missing"}));
+	}
+
+	JWT.verify(refreshToken, process.env.JWT_REFRESH_TOKEN_SECRET, async (err, payload) => {
+		try {
+			if (err) {
+				return res.sendStatus(401);
+			}
+
+			const hashedId = payload.sub.user_id;
+			const result = await getRedisClient().get(hashedId);
+
+			if (refreshToken !== result) {
+				return res.sendStatus(401);
+			}
+
+			const hashids = new Hashids(process.env.HASH_ID_SECRET, 10);
+			const dehashedId = hashids.decode(hashedId);
+			const userId = dehashedId[0];
+			const accessToken = signToken(userId);
+			refreshToken = signRefreshToken(userId);
+			res.status(200).json(
+				apiResponse({
+					data: {accessToken: accessToken, refreshToken: refreshToken},
+				})
+			);
+		} catch (err) {
+			res.status(500).json(
+				apiResponse({
+					message: "Internal server error",
+					error: [err.message],
+				})
+			);
+		}
 	});
 };
 
 // Get token
-exports.getToken = (req, res) => {
+exports.getToken = async (req, res) => {
 	const idUser = "100001";
 	const accessToken = signToken(idUser);
-	const refreshToken = signRefreshToken(idUser);
-	res.status(200).send({
-		code: "success",
-		header: "Welcome",
-		message: "Your token",
-		accesstoken: accessToken,
-		refreshToken: refreshToken,
-	});
+	try {
+		const refreshToken = signRefreshToken(idUser);
+		res.status(200).json(
+			apiResponse({
+				message: "Your token",
+				data: {accessToken: accessToken, refreshToken: refreshToken},
+			})
+		);
+	} catch (err) {
+		res.status(500).json(
+			apiResponse({
+				message: "Internal server error",
+				error: [err.message],
+			})
+		);
+	}
 };
 
 // Get User (/v1/get_me endPoint)
@@ -80,20 +80,20 @@ exports.getUser = async (req, res) => {
 		res.status(400).send("Request is empty.");
 	}
 	try {
-		const user = await User.findOne({where: {id: req.body.id}});
-		if (user === null) {
-			res.status(204).json(
-				apiResponse({
-					message: "User not found.",
-				})
-			);
+		const USER = await db.user.findOne({where: {id: req.body.id}});
+		if (!USER) {
+			res.status(204).json({
+				// Cambiar por el método API RESPONSE
+				success: "false",
+				message: "user not found",
+			});
 		} else {
-			res.status(200).json(
-				apiResponse({
-					message: "Success.",
-					data: {name: user.name, lastnames: user.lastnames},
-				})
-			);
+			res.status(200).json({
+				// Cambiar por el método API RESPONSE
+				success: "true",
+				name: USER.name,
+				lastnames: USER.lastnames,
+			});
 		}
 	} catch (err) {
 		console.error(err);
@@ -110,7 +110,7 @@ exports.registerUser = async (req, res) => {
 		const {name, lastnames, ...userDTO} = req.body;
 		const validFields = await registerSchema.validateAsync(userDTO);
 
-		const doesExist = await User.findOne({where: {email: req.body.email}});
+		const doesExist = await db.user.findOne({where: {email: req.body.email}});
 		if (doesExist !== null) {
 			res.status(400).json(
 				apiResponse({
@@ -120,7 +120,7 @@ exports.registerUser = async (req, res) => {
 			);
 		}
 		const {privacy, ...userDTO2} = req.body;
-		const newUser = await User.create({...req.body});
+		const newUser = await db.user.create({...req.body});
 		res.status(200).json(
 			apiResponse({
 				message: "User registered correctly.",
@@ -148,7 +148,7 @@ exports.registerUser = async (req, res) => {
 //get all users (FOR TESTING PURPOSE)
 exports.getAllUsers = async (req, res) => {
 	try {
-		const users = await User.findAll();
+		const users = await db.user.findAll();
 		res.status(200).json(users);
 	} catch (err) {
 		console.error(err);
@@ -223,7 +223,7 @@ exports.updateUserRole = async (req, res) => {
 		res.status(400).send("Request is empty.");
 	}
 	try {
-		const user = await User.update(
+		const user = await db.user.update(
 			{user_role_id: req.body.user_role_id},
 			{where: {id: req.body.user_id}}
 		);
@@ -250,41 +250,40 @@ exports.updateUserRole = async (req, res) => {
 	}
 };
 
-/* // Get user
-exports.getUser = async (req, res) => {
-	// Check that the request isn't empty
-	if (!req.user) {
-		res.status(404).send("User not found.");
+//Update some user field with id_user & newfield (FOR TESTING PURPOSE)
+exports.updateUser = async (req, res) => {
+	const {user_id, user_role_id, user_status_id} = req.body;
+	if (!user_id) {
+		res.status(400).json(
+			apiResponse({
+				message: "user_id not defined",
+			})
+		);
 	}
-	try {
-		const userModel = await db.mec_user.findOne({
-			raw: true,
-			nest: true,
-			attributes: {
-				exclude: ["mec_pwd", "password_change"],
-			},
-			include: [
-				{
-					model: db.profile,
-					attributes: ["id"],
-				},
-				{
-					model: db.mecuser_people,
-				},
-				{model: db.people},
-			],
-			where: {id: req.user.uid},
-		});
 
-		if (userModel) {
-			if (userModel.person.picture) {
-				userModel.person.picture = Buffer.from(userModel.person.picture).toString("base64");
-			}
-			res.status(200).json(userModel);
+	if (!user_role_id && !user_status_id) {
+		res.status(400).json(
+			apiResponse({
+				message: "undefined values",
+			})
+		);
+	}
+
+	try {
+		const user = await db.user.update({...req.body}, {where: {id: req.body.user_id}});
+		if (user === null) {
+			res.status(204).json(
+				apiResponse({
+					message: "User not Found.",
+				})
+			);
 		} else {
-			res.status(404).json({
-				message: "User not found.",
-			});
+			// return data
+			res.status(200).json(
+				apiResponse({
+					message: "User updated successfully",
+				})
+			);
 		}
 	} catch (err) {
 		console.error(err);
@@ -292,7 +291,7 @@ exports.getUser = async (req, res) => {
 			message: err.message || "Some error ocurred while retrieving your account.",
 		});
 	}
-}; */
+};
 
 // Delete user
 exports.deleteUser = async (req, res) => {
@@ -338,57 +337,6 @@ exports.deleteUser = async (req, res) => {
 	}
 };
 
-/* // Get user
-exports.login = async (req, res) => {
-	const email = req.body.username;
-	const password = req.body.password;
-	// Check that the request isn't empty
-	if (!email || !password) {
-		res.status(400).send({
-			code: "error",
-			message: "email and password compulsory!",
-		});
-		return;
-	}
-
-	try {
-		const user = await User.findOne({ where: { email: email } });
-		if (!user) return res.status(404).send({
-				code: "error",
-				header: "User doesn't exist",
-				message: "There's no user with that email",
-			})
-
-	// TODO: password checking when password encryptation done with Argon2
-		// let value = await USER.validatePassword(password, USER.mec_pwd);
-
-		// if (!value) {
-		// 	res.status(200).send({
-		// 		code: "error",
-		// 		header: "Wrong password",
-		// 		message:
-		// 			"The password you introduced is incorrect, please try again or try to recover your password.",
-		// 	});
-		// } else {
-			const accessToken = signToken(user.id);
-			const refreshToken = signRefreshToken(user.id);
-			res.status(200).send({
-				code: "success",
-				header: "Welcome back",
-				message: "We are redirecting you to your account.",
-				"access-token": accessToken,
-				"refresh-token": refreshToken
-			});
-
-	} catch (err) {
-		console.log(err);
-		res.status(500).send({
-			code: "error",
-			message: err.message || "Some error ocurred while retrieving your account.",
-		});
-	}
-}; */
-
 exports.forgetPassword = async (req, res) => {
 	const {email} = req.body;
 	try {
@@ -433,26 +381,16 @@ exports.forgetPassword = async (req, res) => {
 	}
 };
 
-// - El usuario olvida su contraseña.
-// - El usuario pincha en un enlace. Se le solicita el email.
-// - Tu recibes el email, compruebas que el usuario existe.
-// - Si existe generas un token y un expiry_date de una hora, así le das una hora para que responda a un email que le vas a enviar. (ese email no se lo envias por el momento).
-// - El usuario entonces recibe un email, con un enlace a miweb.com/recover-password
-// - Desde ahí se hace una petición GET con el hash que has generado, eso lo recibes como un query-parameter.
-// - Compruebas si el hash pertenece al usuario y esta dentro del tiempo permitido. Si es así le das permiso para que cambie la contraseña.
-// - Recibes la contraseña.
-// - Actualizas la BD
 exports.receiveEmailGetToken = async (req, res) => {
 	try {
 		const {user} = req.body;
 
-		const passUser = await User.findOne({
+		const passUser = await db.user.findOne({
 			where: {
 				email: user,
 			},
 		});
 
-		// console.log(passUser);
 		if (passUser) {
 			const accessToken = signToken(passUser, "1h");
 
@@ -531,7 +469,7 @@ exports.changePassword = async (req, res) => {
 			parallelism: 1,
 		});
 
-		const passUser = await User.findOne({
+		const passUser = await db.user.findOne({
 			where: {
 				email: user,
 			},
@@ -554,79 +492,3 @@ exports.changePassword = async (req, res) => {
 		);
 	}
 };
-
-exports.updateUserStatus = async (req, res) => {
-	const User_status = db.initModels.user_status;
-	const userStatusArray = await User_status.findAll({attributes: ["id", "name"], raw: true});
-	const userStatus = {};
-	userStatusArray.forEach((item) => (userStatus[item.name] = item.id));
-
-	const userStatusName = req.body.userStatus;
-	const userStatusId = userStatus[userStatusName];
-	const userId = req.body.id;
-
-	if (userId == undefined)
-		return res.status(400).json(apiResponse({message: "Missing user id in the request"}));
-	try {
-		const user = await User.findOne({where: {id: userId}});
-		if (user === null) {
-			res.status(404).json(apiResponse({message: "User not found"}));
-		} else {
-			if (userStatusName == undefined || !userStatusId) {
-				return res.status(400).json(apiResponse({message: "User status not valid"}));
-			}
-			await User.update({user_status_id: userStatusId}, {where: {id: userId}});
-			const updatedUser = await User.findOne({where: {id: userId}});
-			res.status(200).json(apiResponse({message: "User updated", data: updatedUser}));
-		}
-	} catch (err) {
-		console.error(err);
-		res.status(500).json(
-			apiResponse({
-				message: "Some error ocurred while updating your account.",
-				error: [err.message],
-			})
-		);
-	}
-};
-
-// exports.updatePassword = async (req, res) => {
-// 	const uemail = req.body.email;
-// 	const upwd = req.body.password;
-// 	// Validate request
-// 	if (!uemail || !upwd) {
-// 		res.status(400).send({
-// 			code: "error",
-// 			message: "You need to write your email and password.",
-// 		});
-// 		return;
-// 	}
-
-// 	try {
-// 		const USER = await db.mec_user.findOne({where: {mec_un: uemail}});
-
-// 		if (!USER) {
-// 			res.status(200).send({
-// 				code: "error",
-// 				message: "There's no user with that email.",
-// 			});
-// 			return;
-// 		}
-
-// 		// Update password
-// 		let new_pass = db.mec_user.prototype.generateHash(upwd);
-// 		USER.mec_pwd = new_pass;
-// 		await USER.save();
-
-// 		res.status(200).send({
-// 			code: "success",
-// 			message: "Your password has been updated succesfuly.",
-// 		});
-// 	} catch (err) {
-// 		console.log(err);
-// 		res.status(500).send({
-// 			code: "error",
-// 			message: err.message || "Some error ocurred while retrieving your account.",
-// 		});
-// 	}
-// };

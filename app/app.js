@@ -1,25 +1,23 @@
 const express = require("express");
-// const bodyParser = require("body-parser");
 const morgan = require("morgan");
 const cors = require("cors");
-const JwtStrategy = require("./middleware/verifyToken");
-// const passport = require("passport");
 const helmet = require("helmet");
-// const swaggerUi = require("swagger-ui-express");
-// const swaggerDocument = require("./utils/swagger.json");
 const expressJSDocSwagger = require("express-jsdoc-swagger");
 const options = require("./utils/swaggerOptions");
 const db = require("./models");
 const userRoutes = require("./routes/users");
+const constantsRoute = require("./routes/constants");
 
 const authenticateToken = require("./middleware/verifyToken");
 const UsersController = require("./controllers/users");
+const {loadConstants} = require("./utils/CONSTANTS");
 
 // Check the connection with the DB
 db.sequelize
 	.authenticate()
-	.then(() => {
+	.then(async () => {
 		console.log("Connection has been established successfully.");
+		loadConstants();
 	})
 	.catch((err) => {
 		console.error("Unable to connect to the database:", err);
@@ -50,12 +48,13 @@ app.get("/", (req, res) => {
 	res.json({message: "ITA DIRECTORY API"});
 });
 
-app.get("/getToken", UsersController.getToken);
-app.get("/testToken", authenticateToken, (req, res) => {
-	res.json({message: "Correct Token !"});
-});
-
 // Routes
+app.use("/", constantsRoute);
 app.use("/users", userRoutes);
+
+app.get("/get-token", UsersController.getToken);
+app.get("/test-token", authenticateToken, (req, res) => {
+	res.json({message: "Correct Token !", data: {user_id: req.userId}});
+});
 
 module.exports = app;
