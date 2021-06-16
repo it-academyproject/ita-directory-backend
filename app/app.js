@@ -1,4 +1,5 @@
 const express = require("express");
+const http = require('http');
 // const bodyParser = require("body-parser");
 const morgan = require("morgan");
 const cors = require("cors");
@@ -28,6 +29,7 @@ db.sequelize
 
 // Initiate the app
 const app = express();
+const server = http.createServer(app);
 
 app.use(cors());
 app.use(express.json());
@@ -64,3 +66,4 @@ app.get("/testToken", authenticateToken, (req, res) => {
 app.use("/users", userRoutes);
 
 module.exports = app;
+module.exports = server;

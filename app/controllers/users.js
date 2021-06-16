@@ -7,7 +7,6 @@ const Hashids = require('hashids');
 
 // Internal modules
 const db = require("../models/index");
-const User = db.initModels.user; 
 const { apiResponse, signToken, signRefreshToken } = require("../utils/utils");
 
 // Refresh token
@@ -88,6 +87,26 @@ exports.getUser = async (req, res) => {
 		});
 	}
 };
+
+
+//Update user 
+exports.createUser = async(req, res) => {
+	try {
+	const {name, lastnames, password} = req.body;
+	const newUser = await User.create({name: name, lastnames: lastnames, password: password, user_role_id: 3, user_status_id: 2});
+	res.status(200).json({
+		success: "true",
+		user_id: newUser.id,
+		name: newUser.name,
+		lastnames: newUser.lastnames
+	});
+	} catch (err) {
+		console.error(err);
+		res.status(500).send({
+			message: err.message || "Some error ocurred while retrieving your account.",
+		});
+	}
+}  
 
 //Create user 
 exports.createUser = async(req, res) => {
@@ -186,7 +205,11 @@ exports.updateUserRole = async(req, res) => {
 		res.status(400).send("Request is empty.");
 	} 
 	try {
+		console.log("***User BEFORE***", User);
 		const user = await User.update({user_role_id: req.body.user_role_id},{ where: { id: req.body.user_id } });
+		console.log("***user***", user);
+		console.log("***User***", User);
+
 		if (user === null) {
 		  res.status(204).json({
 			success: "false",
@@ -216,7 +239,6 @@ exports.updateUser = async(req, res) => {
 	
 	try {
 		const user = await User.update({...req.body},{where: {id: req.body.user_id}});
-		
 		if (user === null) {
 			res.status(204).json(
 				apiResponse({
@@ -572,9 +594,12 @@ exports.updateUserStatus = async (req, res) => {
 			if (userStatusName == undefined || !userStatusId) {
 				return res.status(400).json(apiResponse({ message: "User status not valid" }))
 			}
-			await User.update({user_status_id: userStatusId}, { where: { id : userId } });
-			const updatedUser = await User.findOne({ where: { id: userId } });
-			res.status(200).json(apiResponse({ message: "User updated", data: updatedUser }))
+			user.user_status_id = userStatusId;
+			await user.save();
+			console.log(user);
+			/* await .update({user_status_id: userStatusId}, { where: { id : userId } });
+			const updatedUser = await User.findOne({ where: { id: userId } }); */
+			res.status(200).json(apiResponse({ message: "User updated", data: user }))
 		}
 	} catch (err) {
 		console.error(err);
