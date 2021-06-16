@@ -3,52 +3,53 @@ const JWT = require("jsonwebtoken");
 const argon2 = require("argon2");
 const {getRedisClient} = require("../utils/initRedis");
 const Hashids = require("hashids");
-const {apiResponse, signToken, signRefreshToken} = require("../utils/utils");
-
-// Internal modules
+const {apiResponse, signToken, signRefreshToken, registerSchema} = require("../utils/utils");
 const db = require("../models/index");
-const {registerSchema} = require("./../utils/utils");
 
 // Refresh token
 exports.getRefreshToken = (req, res) => {
 	let {refreshToken} = req.body;
-
 	if (!refreshToken) {
 		return res.status(400).json(apiResponse({message: "refresh token missing"}));
 	}
+	JWT.verify(
+		refreshToken,
+		process.env.JWT_REFRESH_TOKEN_SECRET,
+		{ignoreExpiration: true},
+		async (err, payload) => {
+			try {
+				if (err) return res.sendStatus(401);
+				const hashedId = payload.sub.user_id;
+				const hashids = new Hashids(process.env.HASH_ID_SECRET, 10);
+				const dehashedId = hashids.decode(hashedId);
+				const userId = dehashedId[0];
 
-	JWT.verify(refreshToken, process.env.JWT_REFRESH_TOKEN_SECRET, async (err, payload) => {
-		try {
-			if (err) {
-				return res.sendStatus(401);
+				const result = await getRedisClient().get(userId);
+				if (refreshToken !== result) {
+					const counterKey = `C${userId}`;
+					await getRedisClient().incr(counterKey);
+					return res.sendStatus(401);
+				}
+				const accessToken = signToken(userId);
+				refreshToken = await signRefreshToken(userId);
+				res.status(200).json(
+					apiResponse({
+						data: {
+							accessToken: accessToken,
+							refreshToken: refreshToken,
+						},
+					})
+				);
+			} catch (err) {
+				res.status(500).json(
+					apiResponse({
+						message: "Internal server error",
+						error: [err.message],
+					})
+				);
 			}
-
-			const hashedId = payload.sub.user_id;
-			const result = await getRedisClient().get(hashedId);
-
-			if (refreshToken !== result) {
-				return res.sendStatus(401);
-			}
-
-			const hashids = new Hashids(process.env.HASH_ID_SECRET, 10);
-			const dehashedId = hashids.decode(hashedId);
-			const userId = dehashedId[0];
-			const accessToken = signToken(userId);
-			refreshToken = signRefreshToken(userId);
-			res.status(200).json(
-				apiResponse({
-					data: {accessToken: accessToken, refreshToken: refreshToken},
-				})
-			);
-		} catch (err) {
-			res.status(500).json(
-				apiResponse({
-					message: "Internal server error",
-					error: [err.message],
-				})
-			);
 		}
-	});
+	);
 };
 
 // Get token
@@ -56,7 +57,7 @@ exports.getToken = async (req, res) => {
 	const idUser = "100001";
 	const accessToken = signToken(idUser);
 	try {
-		const refreshToken = signRefreshToken(idUser);
+		const refreshToken = await signRefreshToken(idUser);
 		res.status(200).json(
 			apiResponse({
 				message: "Your token",
@@ -81,9 +82,8 @@ exports.getUser = async (req, res) => {
 	}
 	try {
 		const USER = await db.user.findOne({where: {id: req.body.id}});
-		if (!USER) {
+		if (USER === null) {
 			res.status(204).json({
-				// Cambiar por el método API RESPONSE
 				success: "false",
 				message: "user not found",
 			});
