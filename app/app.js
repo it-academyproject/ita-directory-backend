@@ -3,25 +3,23 @@ const http = require('http');
 // const bodyParser = require("body-parser");
 const morgan = require("morgan");
 const cors = require("cors");
-const JwtStrategy = require("./middleware/verifyToken");
-// const passport = require("passport");
 const helmet = require("helmet");
-// const swaggerUi = require("swagger-ui-express");
-// const swaggerDocument = require("./utils/swagger.json");
-const expressJSDocSwagger = require('express-jsdoc-swagger');
-const options= require("./utils/swaggerOptions")
+const expressJSDocSwagger = require("express-jsdoc-swagger");
+const options = require("./utils/swaggerOptions");
 const db = require("./models");
 const userRoutes = require("./routes/users");
-const path = require("path");
+const constantsRoute = require("./routes/constants");
 
 const authenticateToken = require("./middleware/verifyToken");
 const UsersController = require("./controllers/users");
+const {loadConstants} = require("./utils/CONSTANTS");
 
 // Check the connection with the DB
 db.sequelize
 	.authenticate()
-	.then(() => {
+	.then(async () => {
 		console.log("Connection has been established successfully.");
+		loadConstants();
 	})
 	.catch((err) => {
 		console.error("Unable to connect to the database:", err);
@@ -35,13 +33,9 @@ app.use(cors());
 app.use(express.json());
 app.use(
 	express.urlencoded({
-		extended: true
+		extended: true,
 	})
 );
-
-//Setting ejs for testing uploadFile routes. To Be Deleted after approval.
-app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "views"));
 
 // Middlewares
 app.use(morgan("dev"));
@@ -57,13 +51,14 @@ app.get("/", (req, res) => {
 	res.json({message: "ITA DIRECTORY API"});
 });
 
-app.get("/getToken", UsersController.getToken);
-app.get("/testToken", authenticateToken, (req, res) => {
-	res.json({message: "Correct Token !", data: {"user_id": req.userId} });
-});
-
 // Routes
+app.use("/", constantsRoute);
 app.use("/users", userRoutes);
+
+app.get("/get-token", UsersController.getToken);
+app.get("/test-token", authenticateToken, (req, res) => {
+	res.json({message: "Correct Token !", data: {user_id: req.userId}});
+});
 
 module.exports = app;
 module.exports = server;
