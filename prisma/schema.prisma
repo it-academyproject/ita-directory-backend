@@ -55,3 +55,30 @@ model recover_password {
   user user @relation(fields: [user_id], references: [id])
   user_id Int
 }
+
+model media {
+  id Int        @id @default(autoincrement())
+  path  String
+  mime_type String
+  file_size String
+  user user @relation(fields: [user_id], references: [id])
+  user_id Int
+}
+
+model conversation {
+  user_id_one Int
+  user_id_two Int
+  created_at DateTime
+}
+
+model message {
+  id Int          @id @default(autoincrement())
+  content String
+  created_at DateTime
+  conversation conversation @relation(fields: [conversation_user_id_one], references: [id])
+  conversation_user_id_one Int
+  conversation conversation @relation(fields: [conversation_user_id_two], references: [id])
+  conversation_user_id_two Int
+  user user @relation(fields: [user_id], references: [id])
+  user_id Int
+}
