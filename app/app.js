@@ -1,4 +1,6 @@
 const express = require("express");
+const http = require("http");
+// const bodyParser = require("body-parser");
 const morgan = require("morgan");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -8,6 +10,7 @@ const db = require("./models");
 const userRoutes = require("./routes/users");
 const constantsRoute = require("./routes/constants");
 const adsRoutes = require("./routes/ads");
+const socketio = require("socket.io");
 
 const authenticateToken = require("./middleware/verifyToken");
 const UsersController = require("./controllers/users");
@@ -26,6 +29,7 @@ db.sequelize
 
 // Initiate the app
 const app = express();
+const server = http.Server(app);
 
 app.use(cors());
 app.use(express.json());
@@ -34,6 +38,10 @@ app.use(
 		extended: true,
 	})
 );
+
+//Settings for testing SocketIO
+app.use(express.static("public"));
+//app.set('view engine', 'ejs');
 
 // Middlewares
 app.use(morgan("dev"));
@@ -59,4 +67,17 @@ app.get("/test-token", authenticateToken, (req, res) => {
 	res.json({message: "Correct Token !", data: {user_id: req.userId}});
 });
 
-module.exports = app;
+//Routes for testing chat
+app.get("/chat", (req, res) => {
+	res.status(200).send("Hello World");
+});
+
+//Initiate socket connection
+const io = socketio(server);
+
+//Running socket connection
+io.on("connection", (socket) => {
+	console.log("Socket successfully initialized");
+});
+
+module.exports = server;
