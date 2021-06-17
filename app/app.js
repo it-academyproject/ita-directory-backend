@@ -11,6 +11,7 @@ const userRoutes = require("./routes/users");
 const constantsRoute = require("./routes/constants");
 const chatRoutes = require("./routes/chat");
 const socketio = require('socket.io')
+const chatRoutes = require("./routes/chat");
 
 const authenticateToken = require("./middleware/verifyToken");
 const UsersController = require("./controllers/users");
