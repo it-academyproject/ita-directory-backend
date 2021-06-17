@@ -16,6 +16,7 @@
   "author": "Kevin Mamaqi Kapllani",
   "license": "ISC",
   "dependencies": {
+    "@prisma/client": "^2.25.0",
     "argon2": "^0.28.2",
     "cors": "^2.8.5",
     "dotenv": "^10.0.0",
@@ -40,7 +41,7 @@
     "eslint-config-prettier": "^8.3.0",
     "nodemon": "^2.0.7",
     "prettier": "^2.3.1",
-    "prisma": "^2.24.1",
+    "prisma": "^2.25.0",
     "sequelize-auto": "^0.8.3"
   }
 }

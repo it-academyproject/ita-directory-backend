@@ -20,6 +20,19 @@ const registerSchema = Joi.object({
 	privacy: Joi.boolean().valid(true).required(),
 });
 
+const adsSchema = Joi.object({
+	// user: Joi.string().required(),
+	title: Joi.string().required(),
+	description: Joi.string().required(),
+	city: Joi.string().required(),
+	n_rooms: Joi.number().required(),
+	price: Joi.number().required(),
+	square_meters: Joi.number().required(),
+	n_bathrooms: Joi.number().required(),
+	map_lat: Joi.number().required(),
+	map_lon: Joi.number().required(),
+});
+
 const signToken = (userid, maxAge = "15m") => {
 	const hashedId = hashids.encode(userid);
 	const payload = {iss: "itacademy", sub: {user_id: hashedId}};
@@ -43,6 +56,7 @@ module.exports = {
 	// generateBlob,
 	apiResponse,
 	registerSchema,
+	adsSchema,
 	signToken,
 	signRefreshToken,
 };
