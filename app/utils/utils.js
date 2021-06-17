@@ -14,6 +14,8 @@ const apiResponse = ({message = "", data = {}, errors = []}) => {
 	return {message, data, errors};
 };
 
+const AdByIdParamSchema = Joi.number().integer().required();
+
 const registerSchema = Joi.object({
 	email: Joi.string().email().required(),
 	password: Joi.string().min(2).required(),
@@ -21,7 +23,7 @@ const registerSchema = Joi.object({
 });
 
 const adsSchema = Joi.object({
-	// user: Joi.string().required(),
+	user_id: Joi.number().required(),
 	title: Joi.string().required(),
 	description: Joi.string().required(),
 	city: Joi.string().required(),
@@ -57,6 +59,7 @@ module.exports = {
 	apiResponse,
 	registerSchema,
 	adsSchema,
+	AdByIdParamSchema,
 	signToken,
 	signRefreshToken,
 };

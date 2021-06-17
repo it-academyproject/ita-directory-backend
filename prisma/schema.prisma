@@ -43,7 +43,7 @@ model user {
   acces_log        acces_log[]
   recover_password recover_password[]
   media            media[]
-  // ads              ads[]
+  ads              ads[]
 }
 
 model acces_log {
@@ -71,6 +71,7 @@ model media {
   user_id   Int
 }
 
+// TODO: Figure out the user - conversation - message schemas in prisma.
 // model conversation {
 //   user_id_one Int
 //   user_id_two Int
@@ -91,8 +92,8 @@ model media {
 
 model ads {
   id            Int     @id @default(autoincrement())
-  // user          user    @relation(fields: [user_id], references: [id])
-  // user_id       Int
+  user          user    @relation(fields: [user_id], references: [id])
+  user_id       Int
   title         String
   description   String
   city          String
