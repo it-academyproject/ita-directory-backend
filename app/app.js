@@ -9,6 +9,7 @@ const options = require("./utils/swaggerOptions");
 const db = require("./models");
 const userRoutes = require("./routes/users");
 const constantsRoute = require("./routes/constants");
+const chatRoutes = require("./routes/chat");
 const socketio = require('socket.io')
 
 const authenticateToken = require("./middleware/verifyToken");
@@ -60,7 +61,7 @@ app.get("/", (req, res) => {
 // Routes
 app.use("/", constantsRoute);
 app.use("/users", userRoutes); 
-
+app.use("/chat", chatRoutes);
 app.get("/get-token", UsersController.getToken);
 app.get("/test-token", authenticateToken, (req, res) => {
 	res.json({message: "Correct Token !", data: {user_id: req.userId}});
