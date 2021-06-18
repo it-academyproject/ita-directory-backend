@@ -1,22 +1,35 @@
 const db = require("../models/index");
+const {apiResponse} = require("../utils/utils");
+const { Op } = require("sequelize");
 
-//get all conversations (FOR TESTING PURPOSE)
+//get all conversations 
 exports.getAllConversations = async (req, res) => {
 	try {
 		const conversations = await db.conversation.findAll();
-		res.status(200).json(conversations);
-	} catch (err) {
+		res.status(200).json(
+			apiResponse({
+				data: {conversations},
+			})
+		);
+	} catch (err) { 
 		console.error(err);
-		res.status(500).send({
-			message: err.message || "Some error ocurred while retrieving conversations.",
-		});
+		res.status(500).json(
+			apiResponse({
+				message: "Internal server error",
+				error: [err.message],
+			})
+		);
 	}
 };
 
-//get conversation by user id (FOR TESTING PURPOSE)
+//get conversation by user id 
 exports.getConversationById = async (req, res) => {
 	if (!req.body) {
-		res.status(400).send("Request is empty.");
+		res.status(400).json(
+			apiResponse({
+				message: "Request is empty",
+			})
+		);
 	}
 	try {
         const conversation = await db.conversation.findOne({where: 
@@ -25,53 +38,80 @@ exports.getConversationById = async (req, res) => {
                 {user_id_two: req.body.id}
             ]}});
 		if (conversation === null) {
-			res.status(204).json({
-				success: "false",
-				message: "conversation not found",
-			});
+			res.status(200).json(
+				apiResponse({
+					message: "There is no conversation registered for this user",
+			})
+			);
 		} else {
-			res.status(200).json({conversation});
+			res.status(200).json(
+				apiResponse({
+					data: {conversation},
+				})
+			);
 		}
 	} catch (err) {
 		console.error(err);
-		res.status(500).send({
-			message: err.message || "Some error ocurred while retrieving conversation.",
-		});
+		res.status(500).json(
+			apiResponse({
+				message: "Internal server error",
+				error: [err.message],
+			})
+		);
 	}
 };
 
-//get all messages (FOR TESTING PURPOSE)
+//get all messages 
 exports.getAllMessages = async (req, res) => {
 	try {
 		const messages = await db.message.findAll();
-		res.status(200).json(messages);
+		res.status(200).json(
+			apiResponse({
+				data: {messages},
+			})
+		);
 	} catch (err) {
 		console.error(err);
-		res.status(500).send({
-			message: err.message || "Some error ocurred while retrieving messages.",
-		});
+		res.status(500).json(
+			apiResponse({
+				message: "Internal server error",
+				error: [err.message],
+			})
+		);
 	}
 };
 
-//get messages by user id (FOR TESTING PURPOSE)
+//get all messages by user id 
 exports.getMessageById = async (req, res) => {
 	if (!req.body) {
-		res.status(400).send("Request is empty.");
+		res.status(400).json(
+			apiResponse({
+				message: "Request is empty",
+			})
+		);
 	}
 	try {
-        const message = await db.message.findOne({where:{user_id: req.body.id}});
-		if (conversation === null) {
-			res.status(204).json({
-				success: "false",
-				message: "message not found",
-			});
-		} else {
-			res.status(200).json({message});
+        const message = await db.message.findAll({where:{user_id: req.body.id}});
+		if (message.length === 0) {
+			res.status(200).json(			
+				apiResponse({
+					message: "There is no message registered for this user",
+			})
+			);
+		} if (message.length > 0) {
+			res.status(200).json(
+				apiResponse({
+					data: {message},
+				})
+			);
 		}
 	} catch (err) {
 		console.error(err);
-		res.status(500).send({
-			message: err.message || "Some error ocurred while retrieving messages.",
-		});
+		res.status(500).json(
+			apiResponse({
+				message: "Internal server error",
+				error: [err.message],
+			})
+		);
 	}
 };

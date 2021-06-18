@@ -1,25 +1,13 @@
 const Sequelize = require('sequelize');
 module.exports = function(sequelize, DataTypes) {
-  return sequelize.define('user', {
+  return sequelize.define('message', {
     id: {
       autoIncrement: true,
-      type: DataTypes.INTEGER.UNSIGNED,
+      type: DataTypes.INTEGER,
       allowNull: false,
       primaryKey: true
     },
-    name: {
-      type: DataTypes.STRING(45),
-      allowNull: true
-    },
-    lastnames: {
-      type: DataTypes.STRING(45),
-      allowNull: true
-    },
-    email: {
-      type: DataTypes.STRING(45),
-      allowNull: true
-    },
-    password: {
+    content: {
       type: DataTypes.TEXT,
       allowNull: true
     },
@@ -28,30 +16,33 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: true,
       defaultValue: Sequelize.Sequelize.literal('CURRENT_TIMESTAMP')
     },
-    updated_at: {
-      type: DataTypes.DATE,
-      allowNull: true,
-      defaultValue: Sequelize.Sequelize.literal('CURRENT_TIMESTAMP')
-    },
-    user_status_id: {
-      type: DataTypes.INTEGER,
+    conversation_user_id_one: {
+      type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
       references: {
-        model: 'user_status',
-        key: 'id'
+        model: 'conversation',
+        key: 'user_id_one'
       }
     },
-    user_role_id: {
-      type: DataTypes.INTEGER,
+    conversation_user_id_two: {
+      type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false,
       references: {
-        model: 'user_role',
+        model: 'conversation',
+        key: 'user_id_two'
+      }
+    },
+    user_id: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: false,
+      references: {
+        model: 'user',
         key: 'id'
       }
     }
   }, {
     sequelize,
-    tableName: 'user',
+    tableName: 'message',
     timestamps: false,
     indexes: [
       {
@@ -63,17 +54,18 @@ module.exports = function(sequelize, DataTypes) {
         ]
       },
       {
-        name: "fk_user_user_status_idx",
+        name: "fk_message_conversation1_idx",
         using: "BTREE",
         fields: [
-          { name: "user_status_id" },
+          { name: "conversation_user_id_one" },
+          { name: "conversation_user_id_two" },
         ]
       },
       {
-        name: "fk_user_user_role1_idx",
+        name: "fk_message_user1_idx",
         using: "BTREE",
         fields: [
-          { name: "user_role_id" },
+          { name: "user_id" },
         ]
       },
     ]
