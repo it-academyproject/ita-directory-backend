@@ -13,7 +13,7 @@ router.get("/v1/get_me", UsersController.getUser);
  */
 
 /**
- * POST /v1/register
+ * POST /users/v1/register
  * @summary Allows user to register
  * @tags User
  * @param {userRegistrationData} request.body.required - The payload looks like this:
@@ -45,7 +45,7 @@ router.get("/v1/refresh-token", UsersController.getRefreshToken);
  */
 
 /**
- * POST /v1/login
+ * POST /users/v1/login
  * @summary Allows user to login
  * @tags User
  * @param {userLoginData} request.body.required - The payload looks like this:
@@ -72,7 +72,7 @@ router.post("/v1/login", UsersController.login);
  */
 
 /**
- * PATCH /v1/user
+ * PATCH /users/v1/user
  * @summary Allows Update some field to User
  * @tags User
  * @param {userUpdateData} request.body.required - The payload looks like this:
@@ -96,7 +96,7 @@ router.post("/v1/login", UsersController.login);
  */
 
 /**
- * POST /v1/recover-password
+ * POST /users/v1/recover-password
  * @summary Allows user recover password
  * @tags User
  * @param {userRecoverData} request.body.required - The payload looks like this:

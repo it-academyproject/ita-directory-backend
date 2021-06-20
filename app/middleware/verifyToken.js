@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 const Hashids = require("hashids");
 const {apiResponse} = require("../utils/utils");
 
-module.exports = authenticateToken = (req, res, next) => {
+const authenticateToken = (req, res, next) => {
 	const hashids = new Hashids(process.env.HASH_ID_SECRET, 10);
 	const authHeader = req.headers["authorization"];
 	if (typeof authHeader !== "undefined") {
@@ -18,3 +18,5 @@ module.exports = authenticateToken = (req, res, next) => {
 		});
 	} else res.sendStatus(403);
 };
+
+module.exports = authenticateToken;

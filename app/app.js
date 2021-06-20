@@ -1,5 +1,5 @@
 const express = require("express");
-const http = require('http');
+const http = require("http");
 // const bodyParser = require("body-parser");
 const morgan = require("morgan");
 const cors = require("cors");
@@ -9,7 +9,8 @@ const options = require("./utils/swaggerOptions");
 const db = require("./models");
 const userRoutes = require("./routes/users");
 const constantsRoute = require("./routes/constants");
-const socketio = require('socket.io')
+const adsRoutes = require("./routes/ads");
+const socketio = require("socket.io");
 
 const authenticateToken = require("./middleware/verifyToken");
 const UsersController = require("./controllers/users");
@@ -30,7 +31,6 @@ db.sequelize
 const app = express();
 const server = http.Server(app);
 
-
 app.use(cors());
 app.use(express.json());
 app.use(
@@ -40,7 +40,7 @@ app.use(
 );
 
 //Settings for testing SocketIO
-app.use(express.static('public'));
+app.use(express.static("public"));
 //app.set('view engine', 'ejs');
 
 // Middlewares
@@ -52,14 +52,15 @@ app.use(express.json({limit: "50mb", type: "application/json"}));
 expressJSDocSwagger(app)(options);
 // app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
- // Simple, initial route
+// Simple, initial route
 app.get("/", (req, res) => {
 	res.json({message: "ITA DIRECTORY API"});
 });
 
 // Routes
 app.use("/", constantsRoute);
-app.use("/users", userRoutes); 
+app.use("/ads", adsRoutes);
+app.use("/users", userRoutes);
 
 app.get("/get-token", UsersController.getToken);
 app.get("/test-token", authenticateToken, (req, res) => {
@@ -67,16 +68,16 @@ app.get("/test-token", authenticateToken, (req, res) => {
 });
 
 //Routes for testing chat
-app.get('/chat', (req, res) => {
+app.get("/chat", (req, res) => {
 	res.status(200).send("Hello World");
-})
+});
 
 //Initiate socket connection
 const io = socketio(server);
 
 //Running socket connection
-io.on('connection', (socket) => {
-    console.log('Socket successfully initialized')
-}); 
+io.on("connection", (socket) => {
+	console.log("Socket successfully initialized");
+});
 
 module.exports = server;
