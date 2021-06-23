@@ -1,23 +1,16 @@
 // Internal modules
-const db = require("../models/index");
+const prisma = require("./../../prisma/indexPrisma");
 
 let CONSTANTS = undefined;
 
 async function loadConstants() {
 	try {
-		const user_role = await db.user_role.findAll({
-			attributes: ["id", "name"],
-			raw: true,
-		});
-
-		const user_status = await db.user_status.findAll({
-			attributes: ["id", "name"],
-			raw: true,
-		});
-
+		const user_role = await prisma.user_role.findMany();
+		const user_status = await prisma.user_status.findMany();
+		console.log(user_role, user_status);
 		CONSTANTS = {user_role, user_status};
 	} catch (err) {
-		console.log(err);
+		console.error(err);
 	}
 }
 

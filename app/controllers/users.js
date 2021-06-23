@@ -4,7 +4,7 @@ const argon2 = require("argon2");
 const {getRedisClient} = require("../utils/initRedis");
 const Hashids = require("hashids");
 const {apiResponse, signToken, signRefreshToken, registerSchema} = require("../utils/utils");
-const db = require("../models/index");
+const prisma = require("../../prisma/indexPrisma");
 
 // Refresh token
 exports.getRefreshToken = (req, res) => {
@@ -81,7 +81,7 @@ exports.getUser = async (req, res) => {
 		res.status(400).send("Request is empty.");
 	}
 	try {
-		const USER = await db.user.findOne({where: {id: req.body.id}});
+		const USER = await prisma.user.findUnique({where: {id: req.body.id}});
 		if (USER === null) {
 			res.status(204).json({
 				success: "false",
@@ -110,7 +110,7 @@ exports.registerUser = async (req, res) => {
 		const {name, lastnames, ...userDTO} = req.body;
 		const validFields = await registerSchema.validateAsync(userDTO);
 
-		const doesExist = await db.user.findOne({where: {email: req.body.email}});
+		const doesExist = await prisma.user.findOne({where: {email: req.body.email}});
 		if (doesExist !== null) {
 			res.status(400).json(
 				apiResponse({
@@ -120,7 +120,7 @@ exports.registerUser = async (req, res) => {
 			);
 		}
 		const {privacy, ...userDTO2} = req.body;
-		const newUser = await db.user.create({...req.body});
+		const newUser = await prisma.user.create({...req.body});
 		res.status(200).json(
 			apiResponse({
 				message: "User registered correctly.",
@@ -148,7 +148,7 @@ exports.registerUser = async (req, res) => {
 //get all users (FOR TESTING PURPOSE)
 exports.getAllUsers = async (req, res) => {
 	try {
-		const users = await db.user.findAll();
+		const users = await prisma.user.findAll();
 		res.status(200).json(users);
 	} catch (err) {
 		console.error(err);
@@ -173,11 +173,11 @@ exports.login = async (req, res) => {
 	}
 
 	try {
-		const USER = await db.mec_user.findOne({
+		const USER = await prisma.mec_user.findOne({
 			attributes: ["id", "mec_pwd"],
-			where: db.sequelize.where(
-				db.sequelize.fn("lower", db.sequelize.col("mec_un")),
-				db.sequelize.fn("lower", email)
+			where: prisma.sequelize.where(
+				prisma.sequelize.fn("lower", prisma.sequelize.col("mec_un")),
+				prisma.sequelize.fn("lower", email)
 			),
 		});
 
@@ -223,7 +223,7 @@ exports.updateUserRole = async (req, res) => {
 		res.status(400).send("Request is empty.");
 	}
 	try {
-		const user = await db.user.update(
+		const user = await prisma.user.update(
 			{user_role_id: req.body.user_role_id},
 			{where: {id: req.body.user_id}}
 		);
@@ -270,7 +270,7 @@ exports.updateUser = async (req, res) => {
 	}
 
 	try {
-		const user = await db.user.update({...req.body}, {where: {id: req.body.user_id}});
+		const user = await prisma.user.update({...req.body}, {where: {id: req.body.user_id}});
 		if (user === null) {
 			res.status(204).json(
 				apiResponse({
@@ -300,7 +300,7 @@ exports.deleteUser = async (req, res) => {
 		res.status(404).send("User not found.");
 	}
 	try {
-		const userModel = await db.mec_user.findOne({
+		const userModel = await prisma.mec_user.findOne({
 			raw: true,
 			nest: true,
 			attributes: {
@@ -308,13 +308,13 @@ exports.deleteUser = async (req, res) => {
 			},
 			include: [
 				{
-					model: db.profile,
+					model: prisma.profile,
 					attributes: ["id"],
 				},
 				{
-					model: db.mecuser_people,
+					model: prisma.mecuser_people,
 				},
-				{model: db.people},
+				{model: prisma.people},
 			],
 			where: {id: req.user.uid},
 		});
@@ -340,7 +340,7 @@ exports.deleteUser = async (req, res) => {
 exports.forgetPassword = async (req, res) => {
 	const {email} = req.body;
 	try {
-		const user = await db.mec_user.findOne({where: {mec_un: email}});
+		const user = await prisma.mec_user.findOne({where: {mec_un: email}});
 		if (user) {
 			const token = JWT.sign(
 				{
@@ -353,7 +353,7 @@ exports.forgetPassword = async (req, res) => {
 				},
 				process.env.JWT_SECRET
 			);
-			await db.password_recovery_log.create({
+			await prisma.password_recovery_log.create({
 				id_mec_user: user.id,
 				recovery_date: new Date(),
 				recovery_active: true,
@@ -385,7 +385,7 @@ exports.receiveEmailGetToken = async (req, res) => {
 	try {
 		const {user} = req.body;
 
-		const passUser = await db.user.findOne({
+		const passUser = await prisma.user.findOne({
 			where: {
 				email: user,
 			},
@@ -469,7 +469,7 @@ exports.changePassword = async (req, res) => {
 			parallelism: 1,
 		});
 
-		const passUser = await db.user.findOne({
+		const passUser = await prisma.user.findOne({
 			where: {
 				email: user,
 			},

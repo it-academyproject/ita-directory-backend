@@ -1,14 +1,10 @@
 const redis = require("redis");
 const util = require("util");
 
-let client = null;
-if (process.env.NODE_ENV === "development") {
-	client = redis.createClient();
-} else {
-	client = redis.createClient({
-		password: process.env.REDIS_PASSWORD,
-	});
-}
+const client = redis.createClient({
+    host: process.env.REDIS_HOST,
+    password: process.env.REDIS_PASSWORD,
+});
 
 const set = util.promisify(client.set).bind(client);
 const get = util.promisify(client.get).bind(client);

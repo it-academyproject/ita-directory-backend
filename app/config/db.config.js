@@ -4,7 +4,7 @@ module.exports = {
 	DB: process.env.DB_NAME,
 	OPTIONS: {
 		host: process.env.DB_HOST,
-		dialect: "mysql",
+		dialect: "postgres",
 		define: {
 			freezeTableName: true,
 		},
