@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "export NODE_ENV=development && nodemon server.js",
     "dev-windows": "set NODE_ENV=development&& nodemon server.js",
-    "dev:migrate": "npx prisma migrate dev --name init",
+    "dev:migrate": "npx prisma migrate dev --name init && npx prisma db seed --preview-feature",
     "test": "test"
   },
   "keywords": [

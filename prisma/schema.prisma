@@ -5,25 +5,25 @@ datasource db {
 
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = "native"
+  binaryTargets = ["native", "linux-musl"]
 }
 
 model user_role {
   id         Int     @id @default(autoincrement())
   name       String
-  admin      Boolean
-  manager    Boolean
-  registered Boolean
+  admin      Boolean @default(false)
+  manager    Boolean @default(false)
+  registered Boolean @default(false)
   user       user[]
 }
 
 model user_status {
   id        Int     @id @default(autoincrement())
   name      String
-  active    Boolean
-  pending   Boolean
-  suspended Boolean
-  deleted   Boolean
+  active    Boolean @default(false)
+  pending   Boolean @default(false)
+  suspended Boolean @default(false)
+  deleted   Boolean @default(false)
   user      user[]
 }
 

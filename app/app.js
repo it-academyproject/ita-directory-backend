@@ -13,11 +13,10 @@ const socketio = require("socket.io");
 // const authenticateToken = require("./middleware/verifyToken");
 // const UsersController = require("./controllers/users");
 // const {loadConstants} = require("./utils/CONSTANTS");
-const { loadConstants } = require("./utils/CONSTANTS");
+const {loadConstants} = require("./utils/CONSTANTS");
 
 // Check the connection with the DB
 loadConstants();
-
 
 // Initiate the app
 const app = express();
