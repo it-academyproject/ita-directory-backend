@@ -7,7 +7,7 @@ async function loadConstants() {
 	try {
 		const user_role = await prisma.user_role.findMany();
 		const user_status = await prisma.user_status.findMany();
-		console.log(user_role, user_status);
+		// console.log(user_role, user_status);
 		CONSTANTS = {user_role, user_status};
 	} catch (err) {
 		console.error(err);

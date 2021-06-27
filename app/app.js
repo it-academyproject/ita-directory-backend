@@ -1,5 +1,4 @@
 const express = require("express");
-const http = require("http");
 // const bodyParser = require("body-parser");
 const morgan = require("morgan");
 const cors = require("cors");
@@ -9,7 +8,6 @@ const options = require("./utils/swaggerOptions");
 // const userRoutes = require("./routes/users");
 // const constantsRoute = require("./routes/constants");
 // const adsRoutes = require("./routes/ads");
-const socketio = require("socket.io");
 // const authenticateToken = require("./middleware/verifyToken");
 // const UsersController = require("./controllers/users");
 // const {loadConstants} = require("./utils/CONSTANTS");
@@ -20,7 +18,6 @@ loadConstants();
 
 // Initiate the app
 const app = express();
-const server = http.Server(app);
 
 app.use(cors());
 app.use(express.json());
@@ -63,12 +60,4 @@ app.get("/chat", (req, res) => {
 	res.status(200).send("Hello World");
 });
 
-//Initiate socket connection
-const io = socketio(server);
-
-//Running socket connection
-io.on("connection", (socket) => {
-	console.log("Socket successfully initialized");
-});
-
-module.exports = server;
+module.exports = app;

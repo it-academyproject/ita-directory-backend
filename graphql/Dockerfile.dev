@@ -1,0 +1,8 @@
+FROM node:14
+LABEL description="Instant high-performance GraphQL API for your PostgreSQL database https://github.com/graphile/postgraphile"
+
+# Install PostGraphile and PostGraphile connection filter plugin
+RUN npm install -g tslib postgraphile postgraphile-plugin-connection-filter
+
+EXPOSE 5001
+ENTRYPOINT ["postgraphile", "-n", "0.0.0.0"]
