@@ -2,28 +2,19 @@ const express = require("express");
 // const bodyParser = require("body-parser");
 const morgan = require("morgan");
 const cors = require("cors");
-const JwtStrategy = require("./middleware/verifyToken");
-// const passport = require("passport");
 const helmet = require("helmet");
-// const swaggerUi = require("swagger-ui-express");
-// const swaggerDocument = require("./utils/swagger.json");
-const expressJSDocSwagger = require('express-jsdoc-swagger');
-const options= require("./utils/swaggerOptions")
-const db = require("./models");
-const userRoutes = require("./routes/users");
-
-const authenticateToken = require("./middleware/verifyToken");
-const UsersController = require("./controllers/users");
+const expressJSDocSwagger = require("express-jsdoc-swagger");
+const options = require("./utils/swaggerOptions");
+// const userRoutes = require("./routes/users");
+// const constantsRoute = require("./routes/constants");
+// const adsRoutes = require("./routes/ads");
+// const authenticateToken = require("./middleware/verifyToken");
+// const UsersController = require("./controllers/users");
+// const {loadConstants} = require("./utils/CONSTANTS");
+const {loadConstants} = require("./utils/CONSTANTS");
 
 // Check the connection with the DB
-db.sequelize
-	.authenticate()
-	.then(() => {
-		console.log("Connection has been established successfully.");
-	})
-	.catch((err) => {
-		console.error("Unable to connect to the database:", err);
-	});
+loadConstants();
 
 // Initiate the app
 const app = express();
@@ -32,9 +23,13 @@ app.use(cors());
 app.use(express.json());
 app.use(
 	express.urlencoded({
-		extended: true
+		extended: true,
 	})
 );
+
+//Settings for testing SocketIO
+app.use(express.static("public"));
+//app.set('view engine', 'ejs');
 
 // Middlewares
 app.use(morgan("dev"));
@@ -50,12 +45,19 @@ app.get("/", (req, res) => {
 	res.json({message: "ITA DIRECTORY API"});
 });
 
-app.get("/getToken", UsersController.getToken);
-app.get("/testToken", authenticateToken, (req, res) => {
-	res.json({message: "Correct Token !"});
-});
-
 // Routes
-app.use("/users", userRoutes);
+// app.use("/", constantsRoute);
+// app.use("/ads", adsRoutes);
+// app.use("/users", userRoutes);
+
+// app.get("/get-token", UsersController.getToken);
+// app.get("/test-token", authenticateToken, (req, res) => {
+// 	res.json({message: "Correct Token !", data: {user_id: req.userId}});
+// });
+
+//Routes for testing chat
+app.get("/chat", (req, res) => {
+	res.status(200).send("Hello World");
+});
 
 module.exports = app;
