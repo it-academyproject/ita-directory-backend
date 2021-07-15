@@ -4,12 +4,7 @@ const JWT = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const {getRedisClient} = require("../utils/initRedis");
 const Hashids = require("hashids");
-const {
-	apiResponse,
-	signToken,
-	signRefreshToken,
-	registerSchema,
-} = require("../utils/utils");
+const {apiResponse, signToken, signRefreshToken, registerSchema} = require("../utils/utils");
 const prisma = require("../../prisma/indexPrisma");
 
 // Refresh token
@@ -164,6 +159,9 @@ exports.registerUser = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
 	try {
 		const users = await prisma.user.findMany();
+		if (users.length === 0){
+			res.status(204).json({message: "No users in database."});
+		}
 		res.status(200).json(users);
 	} catch (err) {
 		console.error(err);
@@ -202,12 +200,9 @@ exports.login = async (req, res) => {
 			});
 			return;
 		}
-		
+
 		//res.status(200).json({msg: req.body.password})
-		const passwordIsValid = bcrypt.compareSync(
-			req.body.password,
-			user.password
-		  );
+		const passwordIsValid = bcrypt.compareSync(req.body.password, user.password);
 		if (!passwordIsValid) {
 			res.status(200).send({
 				code: "error",
@@ -224,46 +219,13 @@ exports.login = async (req, res) => {
 				header: "Welcome back",
 				message: "We are redirecting you to your account.",
 				accessToken: accessToken,
-				refreshToken: refreshToken
+				refreshToken: refreshToken,
 			});
 		}
 	} catch (err) {
 		console.log(err);
 		res.status(500).send({
 			code: "error",
-			message: err.message || "Some error ocurred while retrieving your account.",
-		});
-	}
-};
-
-//Update role to user with id_user & id_role (FOR TESTING PURPOSE)
-exports.updateUserRole = async (req, res) => {
-	if (!req.body) {
-		res.status(400).send("Request is empty.");
-	}
-	try {
-		const user = await prisma.user.update(
-			{user_role_id: req.body.user_role_id},
-			{where: {id: req.body.user_id}}
-		);
-		if (user === null) {
-			res.status(204).json({
-				success: "false",
-				message: "user not found",
-			});
-		} else {
-			//make update & return data
-
-			res.status(200).json({
-				success: "true",
-				name: user.name,
-				lastnames: user.lastnames,
-				user_role_id: user.user_role_id,
-			});
-		}
-	} catch (err) {
-		console.error(err);
-		res.status(500).send({
 			message: err.message || "Some error ocurred while retrieving your account.",
 		});
 	}
@@ -361,6 +323,77 @@ exports.deleteUser = async (req, res) => {
 	}
 };
 
+exports.receiveEmailGetToken = async (req, res) => {
+	try {
+		const {user} = req.body;
+
+		const passUser = await prisma.user.findUnique({
+			where: {
+				email: user.email,
+			},
+		});
+
+		if (passUser) {
+			const accessToken = signToken(passUser, "1h");
+
+			res.status(200).json(
+				apiResponse({
+					message: "Access token granted.",
+					data: accessToken,
+				})
+			);
+		} else {
+			res.status(404).json(
+				apiResponse({
+					message: "User not found.",
+				})
+			);
+		}
+	} catch (err) {
+		console.log(err);
+		res.status(500).json(
+			apiResponse({
+				message: "An error occurred with your query.",
+				errors: err.message,
+			})
+		);
+	}
+};
+
+
+//Update role to user with id_user & id_role (FOR TESTING PURPOSE)
+exports.updateUserRole = async (req, res) => {
+	if (!req.body) {
+		res.status(400).send("Request is empty.");
+	}
+	try {
+		const user = await prisma.user.update(
+			{user_role_id: req.body.user_role_id},
+			{where: {id: req.body.user_id}}
+		);
+		if (user === null) {
+			res.status(204).json({
+				success: "false",
+				message: "user not found",
+			});
+		} else {
+			//make update & return data
+
+			res.status(200).json({
+				success: "true",
+				name: user.name,
+				lastnames: user.lastnames,
+				user_role_id: user.user_role_id,
+			});
+		}
+	} catch (err) {
+		console.error(err);
+		res.status(500).send({
+			message: err.message || "Some error ocurred while retrieving your account.",
+		});
+	}
+};
+
 exports.forgetPassword = async (req, res) => {
 	const {email} = req.body;
 	try {
@@ -405,42 +438,7 @@ exports.forgetPassword = async (req, res) => {
 	}
 };
 
-exports.receiveEmailGetToken = async (req, res) => {
-	try {
-		const {user} = req.body;
 
-		const passUser = await prisma.user.findUnique({
-			where: {
-				email: user,
-			},
-		});
-
-		if (passUser) {
-			const accessToken = signToken(passUser, "1h");
-
-			res.status(200).json(
-				apiResponse({
-					message: "Access token granted.",
-					data: accessToken,
-				})
-			);
-		} else {
-			res.status(404).json(
-				apiResponse({
-					message: "User not found.",
-				})
-			);
-		}
-	} catch (err) {
-		console.log(err);
-		res.status(500).json(
-			apiResponse({
-				message: "An error occurred with your query.",
-				errors: err.message,
-			})
-		);
-	}
-};
 
 exports.recoverPassword = async (req, res) => {
 	try {
