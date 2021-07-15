@@ -323,13 +323,17 @@ exports.deleteUser = async (req, res) => {
 	}
 };
 
+// Recover password
 exports.receiveEmailGetToken = async (req, res) => {
 	try {
-		const {user} = req.body;
+		const userEmail = req.body.email;
+		if(!userEmail){
+			res.status(400).send("User email is empty.");
+		}
 
 		const passUser = await prisma.user.findUnique({
 			where: {
-				email: user.email,
+				email: userEmail,
 			},
 		});
 
