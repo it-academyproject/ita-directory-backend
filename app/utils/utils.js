@@ -20,6 +20,8 @@ const registerSchema = Joi.object({
 	email: Joi.string().email().required(),
 	password: Joi.string().min(2).required(),
 	privacy: Joi.boolean().valid(true).required(),
+	user_status: Joi.number().required(),
+	user_role: Joi.number().required(),
 });
 
 const adsSchema = Joi.object({

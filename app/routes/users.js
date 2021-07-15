@@ -86,7 +86,11 @@ router.post("/v1/login", UsersController.login);
  * { "errCode":"errCode", "message":"User not found"}
  */
 //Update some field to User
-//router.patch("/v1/user", UsersController.updateUser);
+router.patch("/v1/user", UsersController.updateUser);
+
+
+// Delete user
+router.delete("/v1/:userId", UsersController.deleteUser);
 
 /**
  * RecoverPassword data
