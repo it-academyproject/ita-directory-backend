@@ -216,12 +216,15 @@ exports.login = async (req, res) => {
 					"The password you introduced is incorrect, please try again or try to recover your password.",
 			});
 		} else {
-			const token = signToken(user.id);
+			const accessToken = await signToken(user.id);
+			const refreshToken = await signRefreshToken(user.id);
 			res.status(200).send({
+				user: user,
 				code: "success",
 				header: "Welcome back",
 				message: "We are redirecting you to your account.",
-				token,
+				accessToken: accessToken,
+				refreshToken: refreshToken
 			});
 		}
 	} catch (err) {
