@@ -47,7 +47,7 @@ model user {
 
 model acces_log {
   id      Int      @id @default(autoincrement())
-  login   DateTime
+  login   DateTime 
   logout  DateTime
   user    user     @relation(fields: [user_id], references: [id])
   user_id Int

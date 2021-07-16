@@ -159,7 +159,7 @@ exports.registerUser = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
 	try {
 		const users = await prisma.user.findMany();
-		if (users.length === 0){
+		if (users.length === 0) {
 			res.status(204).json({message: "No users in database."});
 		}
 		res.status(200).json(users);
@@ -178,11 +178,12 @@ exports.login = async (req, res) => {
 	const password = req.body.password;
 	// Check that the request isn't empty
 	if (!email || !password) {
-		res.status(400).send({
-			code: "error",
-			message: "Content can not be empty!",
-		});
-		return;
+		res.status(400).json(
+			apiResponse({
+				code: "error",
+				message: "Content can not be empty!",
+			})
+		);
 	}
 
 	try {
@@ -193,33 +194,44 @@ exports.login = async (req, res) => {
 		});
 
 		if (!user) {
-			res.status(200).send({
-				code: "error",
-				header: "User doesn't exist",
-				message: "There's no user with that email, please check your email or signup",
-			});
-			return;
+			res.status(200).json(
+				apiResponse({
+					code: "error",
+					header: "User doesn't exist",
+					message:
+						"Login failed. There's no user with that email, please check your email or signup",
+				})
+			);
 		}
 
-		//res.status(200).json({msg: req.body.password})
 		const passwordIsValid = bcrypt.compareSync(req.body.password, user.password);
 		if (!passwordIsValid) {
-			res.status(200).send({
-				code: "error",
-				header: "Wrong password",
-				message:
-					"The password you introduced is incorrect, please try again or try to recover your password.",
-			});
+			res.status(200).json(
+				apiResponse({
+					code: "error",
+					errors: "User doesn't exist",
+					message:
+						"Login failed. The password you introduced is incorrect, please try again or try to recover your password.",
+				})
+			);
 		} else {
-			const accessToken = await signToken(user.id);
-			const refreshToken = await signRefreshToken(user.id);
+			const accessToken = signToken(user.id);
+			const refreshToken = signRefreshToken(user.id);
+			// Update acces_log in user table
+			const updateLog = await prisma.acces_log.create({
+				data: {
+					login: new Date(),
+					logout: new Date(),
+					user_id: user.id
+				}
+			});
 			res.status(200).send({
-				user: user,
 				code: "success",
 				header: "Welcome back",
-				message: "We are redirecting you to your account.",
+				message: "Successfully logged in. We are redirecting you to your account.",
 				accessToken: accessToken,
 				refreshToken: refreshToken,
+				logData: updateLog.login,
 			});
 		}
 	} catch (err) {
@@ -327,8 +339,12 @@ exports.deleteUser = async (req, res) => {
 exports.receiveEmailGetToken = async (req, res) => {
 	try {
 		const userEmail = req.body.email;
-		if(!userEmail){
-			res.status(400).send("User email is empty.");
+		if (!userEmail) {
+			res.status(400).json(
+				apiResponse({
+					message: "User email is empty.",
+				})
+			);
 		}
 
 		const passUser = await prisma.user.findUnique({
@@ -364,7 +380,6 @@ exports.receiveEmailGetToken = async (req, res) => {
 	}
 };
 
-
 //Update role to user with id_user & id_role (FOR TESTING PURPOSE)
 exports.updateUserRole = async (req, res) => {
 	if (!req.body) {
@@ -398,6 +413,7 @@ exports.updateUserRole = async (req, res) => {
 	}
 };
 
+//
 exports.forgetPassword = async (req, res) => {
 	const {email} = req.body;
 	try {
@@ -441,8 +457,6 @@ exports.forgetPassword = async (req, res) => {
 		});
 	}
 };
-
-
 
 exports.recoverPassword = async (req, res) => {
 	try {

@@ -113,11 +113,11 @@ router.delete("/v1/:userId", UsersController.deleteUser);
  * @example response - 400 - Example error response
  * { "errCode":"errCode", "message":"email not found"}
  */
-
 router.post("/v1/recover-password", UsersController.receiveEmailGetToken);
-router.put("/test", UsersController.updateUserRole);
-
 router.get("/v1/change-password/:token", UsersController.recoverPassword);
 router.post("/v1/change-password", UsersController.changePassword);
+
+router.put("/test", UsersController.updateUserRole);
+
 
 module.exports = router;
