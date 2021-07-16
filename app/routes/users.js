@@ -114,10 +114,30 @@ router.delete("/v1/:userId", UsersController.deleteUser);
  * { "errCode":"errCode", "message":"email not found"}
  */
 router.post("/v1/recover-password", UsersController.receiveEmailGetToken);
+
+/**
+ * PATCH /users/v1/update-role"
+ * @summary Allows user update his role
+ * @tags User
+ * @param {userRecoverData} request.body.required - The payload looks like this:
+ * @return {object} 200 - success response - application/json
+ * @return {object} 400 - Bad request response
+ * @example request - Payload example
+ * { "user_id": 1, "new_role_id": 2}
+ * @example response - 200 - Example success response
+ * { "status":"200", "message": "User role successfully updated"}
+ * @example response - 400 - Example error response
+ * { "errCode":"errCode", "message":"role could not be modified"}
+ */
+
+router.patch("/v1/update-role/:id", UsersController.updateUserRole);
+
+
+
+
 router.get("/v1/change-password/:token", UsersController.recoverPassword);
 router.post("/v1/change-password", UsersController.changePassword);
 
-router.put("/test", UsersController.updateUserRole);
 
 
 module.exports = router;
