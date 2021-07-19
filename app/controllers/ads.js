@@ -66,7 +66,7 @@ async function getAllAds(req, res) {
 async function getAdById(req, res) {
 	try {
 		const adId = parseInt(req.params.adId);
-
+		console.log("ID", adId)
 		// Validates if integer.
 		await AdByIdParamSchema.validateAsync(adId);
 
