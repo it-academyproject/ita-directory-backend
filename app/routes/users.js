@@ -61,6 +61,22 @@ router.get("/v1/refresh-token", UsersController.getRefreshToken);
 router.post("/v1/login", UsersController.login);
 
 /**
+ * POST /users/v1/logout
+ * @summary Log out user
+ * @tags User
+ * @param {userLoginData} request.body.required - The payload looks like this:
+ * @return {object} 200 - success response - application/json
+ * @return {object} 400 - Bad request response
+ * @example request - Payload example
+ * { "user_id": 2}
+ * @example response - 200 - Example success response
+ * { "status":"200", "message": "successfully logged out"}
+ * @example response - 400 - Example error response
+ * { "errCode":"errCode", "message":"logout failed"}
+ */
+router.post("/v1/logout", UsersController.logout);
+
+/**
  * Update data
  * @typedef {object} userUpdateData
  * @property {string} name- name of the user
@@ -87,7 +103,6 @@ router.post("/v1/login", UsersController.login);
  */
 //Update some field to User
 router.patch("/v1/user", UsersController.updateUser);
-
 
 // Delete user
 router.delete("/v1/:userId", UsersController.deleteUser);
@@ -132,12 +147,23 @@ router.post("/v1/recover-password", UsersController.receiveEmailGetToken);
 
 router.patch("/v1/update-role/:id", UsersController.updateUserRole);
 
-
-
+/**
+ * GET /users/v1/change-password/:token"
+ * @summary Allows user update his role
+ * @tags User
+ * @param {userRecoverData} request.params.required - The payload looks like this:
+ * @return {object} 200 - success response - application/json
+ * @return {object} 400 - Bad request response
+ * @example request - Payload example
+ * { "user_id": 1, "new_role_id": 2}
+ * @example response - 200 - Example success response
+ * { "status":"200", "message": "Password recover done."}
+ * @example response - 400 - Example error response
+ * { "errCode":"errCode", "message":"Password could not be recovered"}
+ */
 
 router.get("/v1/change-password/:token", UsersController.recoverPassword);
-router.post("/v1/change-password", UsersController.changePassword);
 
-
+//router.post("/v1/change-password", UsersController.changePassword);
 
 module.exports = router;

@@ -104,6 +104,22 @@ exports.getUser = async (req, res) => {
 	}
 };
 
+//get all users (FOR TESTING PURPOSE)
+exports.getAllUsers = async (req, res) => {
+	try {
+		const users = await prisma.user.findMany();
+		if (users.length === 0) {
+			res.status(204).json({message: "No users in database."});
+		}
+		res.status(200).json(users);
+	} catch (err) {
+		console.error(err);
+		res.status(500).send({
+			message: err.message || "Some error ocurred while retrieving your account.",
+		});
+	}
+};
+
 //User signup
 exports.registerUser = async (req, res) => {
 	try {
@@ -152,22 +168,6 @@ exports.registerUser = async (req, res) => {
 				errors: err.message,
 			})
 		);
-	}
-};
-
-//get all users (FOR TESTING PURPOSE)
-exports.getAllUsers = async (req, res) => {
-	try {
-		const users = await prisma.user.findMany();
-		if (users.length === 0) {
-			res.status(204).json({message: "No users in database."});
-		}
-		res.status(200).json(users);
-	} catch (err) {
-		console.error(err);
-		res.status(500).send({
-			message: err.message || "Some error ocurred while retrieving your account.",
-		});
 	}
 };
 
@@ -221,7 +221,7 @@ exports.login = async (req, res) => {
 			const updateLog = await prisma.acces_log.create({
 				data: {
 					login: new Date(),
-					logout: new Date(),
+					logout: new Date(0),
 					user_id: user.id,
 				},
 			});
@@ -241,6 +241,77 @@ exports.login = async (req, res) => {
 			message: err.message || "Some error ocurred while retrieving your account.",
 		});
 	}
+};
+
+// User Logout
+exports.logout = async (req, res) => {
+	const id = req.body.user_id;
+		// Check that the request isn't empty
+	if (!id) {
+		res.status(400).json(
+			apiResponse({
+				code: "error",
+				message: "Id needed to fullfil logout process",
+			})
+		);
+	}
+
+	try {
+		const user = await prisma.user.findUnique({
+			where: {
+				id: id,
+			},
+		});
+
+		if (!user) {
+			res.status(200).json(
+				apiResponse({
+					code: "error",
+					header: "User doesn't exist",
+					message:
+						"There's no user with that email, please check your email or signup",
+				})
+			);
+		}
+		// Search for last acceslog entry from user_id
+		const logToUpdate = await prisma.acces_log.findMany({
+			where:{
+				//user_id: id,
+				AND: [
+					{user_id: id},
+					{
+						logout:{
+							equals: new Date(0)
+						}
+					}
+				]
+			},
+		});
+		//FinMany returns array
+	 	const x = await prisma.acces_log.update({
+			where:{
+				id: logToUpdate[0].id
+			},
+			data:{
+				logout: new Date()
+			}
+		}) 
+		res.status(200).json(
+			apiResponse({
+				message: "User logged out succesfully", 
+				data: logToUpdate[0].id
+
+			})
+		);
+	} catch (err) {
+		console.log(err);
+		res.status(500).send({
+			code: "error",
+			message: err.message || "Some error ocurred while retrieving your account.",
+		});
+	}
+	res.status(200).json({test: "found",data: id})
+
 };
 
 //Update some user field with id_user & newfield (FOR TESTING PURPOSE)
@@ -397,9 +468,11 @@ exports.updateUserRole = async (req, res) => {
 			},
 		});
 		
-		res.status(200).json({
+		res.status(200).json(
+			apiResponse({
 				message: "User role successfully updated"
-			});
+			})
+		);
 	} catch (err) {
 		console.error(err);
 		res.status(500).send({
@@ -456,8 +529,9 @@ exports.forgetPassword = async (req, res) => {
 exports.recoverPassword = async (req, res) => {
 	try {
 		const token = req.params.token;
+		res.json({token: "hola"})
 
-		if (!token) {
+		/* if (!token) {
 			res.status(401).json(
 				apiResponse({
 					message: "Your token is empty.",
@@ -480,7 +554,7 @@ exports.recoverPassword = async (req, res) => {
 					message: "Authorization granted to change your password.",
 				})
 			);
-		});
+		}); */
 	} catch (err) {
 		console.log(err);
 		res.status(500).json(
