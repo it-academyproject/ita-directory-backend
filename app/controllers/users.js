@@ -485,7 +485,7 @@ exports.updateUserRole = async (req, res) => {
 exports.forgetPassword = async (req, res) => {
 	const {email} = req.body;
 	try {
-		const user = await prisma.mec_user.findUnique({where: {mec_un: email}});
+		const user = await prisma.user.findUnique({where: {mec_un: email}});
 		if (user) {
 			const token = JWT.sign(
 				{
