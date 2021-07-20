@@ -481,11 +481,11 @@ exports.updateUserRole = async (req, res) => {
 	}
 };
 
-//
+// 
 exports.forgetPassword = async (req, res) => {
 	const {email} = req.body;
 	try {
-		const user = await prisma.user.findUnique({where: {mec_un: email}});
+		const user = await prisma.user.findUnique({where: {email: email}});
 		if (user) {
 			const token = JWT.sign(
 				{
@@ -526,12 +526,13 @@ exports.forgetPassword = async (req, res) => {
 	}
 };
 
+// Recover user password
 exports.recoverPassword = async (req, res) => {
 	try {
 		const token = req.params.token;
-		res.json({token: "hola"})
+		//res.json({token: "hola"})
 
-		/* if (!token) {
+		if (!token) {
 			res.status(401).json(
 				apiResponse({
 					message: "Your token is empty.",
@@ -554,7 +555,7 @@ exports.recoverPassword = async (req, res) => {
 					message: "Authorization granted to change your password.",
 				})
 			);
-		}); */
+		});
 	} catch (err) {
 		console.log(err);
 		res.status(500).json(
