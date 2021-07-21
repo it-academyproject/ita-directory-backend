@@ -61,6 +61,22 @@ router.get("/v1/refresh-token", UsersController.getRefreshToken);
 router.post("/v1/login", UsersController.login);
 
 /**
+ * POST /users/v1/logout
+ * @summary Log out user
+ * @tags User
+ * @param {userLoginData} request.body.required - The payload looks like this:
+ * @return {object} 200 - success response - application/json
+ * @return {object} 400 - Bad request response
+ * @example request - Payload example
+ * { "user_id": 2}
+ * @example response - 200 - Example success response
+ * { "status":"200", "message": "successfully logged out"}
+ * @example response - 400 - Example error response
+ * { "errCode":"errCode", "message":"logout failed"}
+ */
+router.post("/v1/logout", UsersController.logout);
+
+/**
  * Update data
  * @typedef {object} userUpdateData
  * @property {string} name- name of the user
@@ -86,8 +102,63 @@ router.post("/v1/login", UsersController.login);
  * { "errCode":"errCode", "message":"User not found"}
  */
 //Update some field to User
-//router.patch("/v1/user", UsersController.updateUser);
+router.patch("/v1/user", UsersController.updateUser);
 
+// Delete user
+router.delete("/v1/:userId", UsersController.deleteUser);
+
+
+
+/**
+ * PATCH /users/v1/update-role"
+ * @summary Allows user update his role
+ * @tags User
+ * @param {userRecoverData} request.body.required - The payload looks like this:
+ * @return {object} 200 - success response - application/json
+ * @return {object} 400 - Bad request response
+ * @example request - Payload example
+ * { "user_id": 1, "new_role_id": 2}
+ * @example response - 200 - Example success response
+ * { "status":"200", "message": "User role successfully updated"}
+ * @example response - 400 - Example error response
+ * { "errCode":"errCode", "message":"role could not be modified"}
+ */
+
+router.patch("/v1/update-role/:id", UsersController.updateUserRole);
+
+/**
+ * GET /users/v1/change-password/:token"
+ * @summary Allows user update his role
+ * @tags User
+ * @param {userRecoverData} request.params.required - The payload looks like this:
+ * @return {object} 200 - success response - application/json
+ * @return {object} 400 - Bad request response
+ * @example request - Payload example
+ * { "user_id": 1, "new_role_id": 2}
+ * @example response - 200 - Example success response
+ * { "status":"200", "message": "Password recover done."}
+ * @example response - 400 - Example error response
+ * { "errCode":"errCode", "message":"Password could not be recovered"}
+ */
+
+router.get("/v1/change-password/:token", UsersController.recoverPassword);
+
+/**
+ * GET /users/v1/forget-password/"
+ * @summary Create a temporary toke to recover password
+ * @tags User
+ * @param {userRecoverData} request.body.required - The payload looks like this:
+ * @return {object} 200 - success response - application/json
+ * @return {object} 400 - Bad request response
+ * @example request - Payload example
+ * { "email": "example@gmail.com"}
+ * @example response - 200 - Example success response
+ * { "status":"200", "message": "Temporary token succesfully created."}
+ * @example response - 400 - Example error response
+ * { "errCode":"errCode", "message":"Temporary token could not be recovered"}
+ */
+
+ router.get("/v1/forgot_password/", UsersController.forgetPassword);
 /**
  * RecoverPassword data
  * @typedef {object} userRecoverData
@@ -97,23 +168,21 @@ router.post("/v1/login", UsersController.login);
 
 /**
  * POST /users/v1/recover-password
- * @summary Allows user recover password
- * @tags User
+ * @summary Confirms user allowed to get new password
+ * * @tags token
  * @param {userRecoverData} request.body.required - The payload looks like this:
  * @return {object} 200 - success response - application/json
  * @return {object} 400 - Bad request response
  * @example request - Payload example
- * { "email": "email@example.com", "privacy":true}
+ * { "token": "email@example.com", "privacy":true}
  * @example response - 200 - Example success response
- * { "status":"200", "message": "email sent successfully"}
+ * { "status":"200", "message": "Authorization granted to change your password."}
  * @example response - 400 - Example error response
- * { "errCode":"errCode", "message":"email not found"}
+ * { "errCode":"errCode", "message":"Your token has expired"}
  */
+ router.post("/v1/recover_password", UsersController.recoverPassword);
 
-router.post("/v1/recover-password", UsersController.receiveEmailGetToken);
-router.put("/test", UsersController.updateUserRole);
 
-router.get("/v1/change-password/:token", UsersController.recoverPassword);
-router.post("/v1/change-password", UsersController.changePassword);
+//router.post("/v1/change-password", UsersController.changePassword);
 
 module.exports = router;

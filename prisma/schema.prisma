@@ -28,28 +28,28 @@ model user_status {
 }
 
 model user {
-  id               Int                @id @default(autoincrement())
-  name             String
-  lastnames        String
-  email            String             @unique
-  password         String
-  created_at       DateTime           @default(now())
-  updated_at       DateTime           @default(now())
-  user_status      user_status        @relation(fields: [user_status_id], references: [id])
-  user_status_id   Int
-  user_role        user_role          @relation(fields: [user_role_id], references: [id])
-  user_role_id     Int
-  refresh_token    String
-  acces_log        acces_log[]
-  recover_password recover_password[]
-  media            media[]
-  ads              ads[]
+  id                  Int                @id @default(autoincrement())
+  name                String
+  lastnames           String
+  email               String             @unique
+  password            String
+  created_at          DateTime           @default(now())
+  updated_at          DateTime           @default(now())
+  user_status         user_status        @relation(fields: [user_status_id], references: [id])
+  user_status_id      Int
+  user_role           user_role          @relation(fields: [user_role_id], references: [id])
+  user_role_id        Int
+  acces_log           acces_log[]
+  recover_password    recover_password[]
+  pswd_recovery_log   pswd_recovery_log[]
+  media               media[]
+  ads                 ads[]
 }
 
 model acces_log {
   id      Int      @id @default(autoincrement())
-  login   DateTime
-  logout  DateTime
+  login   DateTime 
+  logout  DateTime 
   user    user     @relation(fields: [user_id], references: [id])
   user_id Int
 }
@@ -61,6 +61,17 @@ model recover_password {
   user        user     @relation(fields: [user_id], references: [id])
   user_id     Int
 }
+
+model pswd_recovery_log {
+  id              Int      @id @default(autoincrement())
+  recovery_date   DateTime
+  recovery_active Boolean
+  token_id        String
+  password_old    String
+  user            user     @relation(fields: [user_id], references: [id])
+  user_id         Int
+}
+
 
 model media {
   id        Int    @id @default(autoincrement())

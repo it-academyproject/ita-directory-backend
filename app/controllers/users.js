@@ -1,10 +1,13 @@
 // External modules
 const JWT = require("jsonwebtoken");
-const argon2 = require("argon2");
+//const argon2 = require("argon2");
+const bcrypt = require("bcryptjs");
 const {getRedisClient} = require("../utils/initRedis");
 const Hashids = require("hashids");
 const {apiResponse, signToken, signRefreshToken, registerSchema} = require("../utils/utils");
 const prisma = require("../../prisma/indexPrisma");
+const {Buffer} = require("buffer");
+const sendEmail = require("../utils/sendEmail");
 
 // Refresh token
 exports.getRefreshToken = (req, res) => {
@@ -103,14 +106,29 @@ exports.getUser = async (req, res) => {
 	}
 };
 
+//get all users (FOR TESTING PURPOSE)
+exports.getAllUsers = async (req, res) => {
+	try {
+		const users = await prisma.user.findMany();
+		if (users.length === 0) {
+			res.status(204).json({message: "No users in database."});
+		}
+		res.status(200).json(users);
+	} catch (err) {
+		console.error(err);
+		res.status(500).send({
+			message: err.message || "Some error ocurred while retrieving your account.",
+		});
+	}
+};
+
 //User signup
 exports.registerUser = async (req, res) => {
 	try {
 		//Checking if valid email, password and privacy policy.
 		const {name, lastnames, ...userDTO} = req.body;
 		const validFields = await registerSchema.validateAsync(userDTO);
-
-		const doesExist = await prisma.user.findOne({where: {email: req.body.email}});
+		const doesExist = await prisma.user.findUnique({where: {email: req.body.email}});
 		if (doesExist !== null) {
 			res.status(400).json(
 				apiResponse({
@@ -119,8 +137,18 @@ exports.registerUser = async (req, res) => {
 				})
 			);
 		}
-		const {privacy, ...userDTO2} = req.body;
-		const newUser = await prisma.user.create({...req.body});
+		const {privacy, user_status, user_role, ...userDTO2} = req.body;
+		const newUser = await prisma.user.create({
+			data: {
+				name: name,
+				lastnames: lastnames,
+				email: req.body.email,
+				password: bcrypt.hashSync(req.body.password, 8),
+				//privacy: req.body.privacy,
+				user_status_id: user_status,
+				user_role_id: user_role,
+			},
+		});
 		res.status(200).json(
 			apiResponse({
 				message: "User registered correctly.",
@@ -145,67 +173,67 @@ exports.registerUser = async (req, res) => {
 	}
 };
 
-//get all users (FOR TESTING PURPOSE)
-exports.getAllUsers = async (req, res) => {
-	try {
-		const users = await prisma.user.findAll();
-		res.status(200).json(users);
-	} catch (err) {
-		console.error(err);
-		res.status(500).send({
-			message: err.message || "Some error ocurred while retrieving your account.",
-		});
-	}
-};
-
 // Login
 exports.login = async (req, res) => {
 	const name = req.body.name;
-	const email = req.body.username;
+	const email = req.body.email;
 	const password = req.body.password;
 	// Check that the request isn't empty
 	if (!email || !password) {
-		res.status(400).send({
-			code: "error",
-			message: "Content can not be empty!",
-		});
-		return;
+		res.status(400).json(
+			apiResponse({
+				code: "error",
+				message: "Content can not be empty!",
+			})
+		);
 	}
 
 	try {
-		const USER = await prisma.mec_user.findOne({
-			attributes: ["id", "mec_pwd"],
-			where: prisma.sequelize.where(
-				prisma.sequelize.fn("lower", prisma.sequelize.col("mec_un")),
-				prisma.sequelize.fn("lower", email)
-			),
+		const user = await prisma.user.findUnique({
+			where: {
+				email: email,
+			},
 		});
 
-		if (!USER) {
-			res.status(200).send({
-				code: "error",
-				header: "User doesn't exist",
-				message: "There's no user with that email, please try again or get in touch.",
-			});
-			return;
+		if (!user) {
+			res.status(200).json(
+				apiResponse({
+					code: "error",
+					header: "User doesn't exist",
+					message:
+						"Login failed. There's no user with that email, please check your email or signup",
+				})
+			);
 		}
 
-		let value = await USER.validatePassword(password, USER.mec_pwd);
-
-		if (!value) {
-			res.status(200).send({
-				code: "error",
-				header: "Wrong password",
-				message:
-					"The password you introduced is incorrect, please try again or try to recover your password.",
-			});
+		const passwordIsValid = bcrypt.compareSync(req.body.password, user.password);
+		if (!passwordIsValid) {
+			res.status(200).json(
+				apiResponse({
+					code: "error",
+					errors: "User doesn't exist",
+					message:
+						"Login failed. The password you introduced is incorrect, please try again or try to recover your password.",
+				})
+			);
 		} else {
-			const token = signToken(USER.id);
+			const accessToken = signToken(user.id);
+			const refreshToken = signRefreshToken(user.id);
+			// Update acces_log in user table
+			const updateLog = await prisma.acces_log.create({
+				data: {
+					login: new Date(),
+					logout: new Date(0),
+					user_id: user.id,
+				},
+			});
 			res.status(200).send({
 				code: "success",
 				header: "Welcome back",
-				message: "We are redirecting you to your account.",
-				token,
+				message: "Successfully logged in. We are redirecting you to your account.",
+				accessToken: accessToken,
+				refreshToken: refreshToken,
+				logData: updateLog.login,
 			});
 		}
 	} catch (err) {
@@ -217,37 +245,72 @@ exports.login = async (req, res) => {
 	}
 };
 
-//Update role to user with id_user & id_role (FOR TESTING PURPOSE)
-exports.updateUserRole = async (req, res) => {
-	if (!req.body) {
-		res.status(400).send("Request is empty.");
-	}
-	try {
-		const user = await prisma.user.update(
-			{user_role_id: req.body.user_role_id},
-			{where: {id: req.body.user_id}}
+// User Logout
+exports.logout = async (req, res) => {
+	const id = req.body.user_id;
+	// Check that the request isn't empty
+	if (!id) {
+		res.status(400).json(
+			apiResponse({
+				code: "error",
+				message: "Id needed to fullfil logout process",
+			})
 		);
-		if (user === null) {
-			res.status(204).json({
-				success: "false",
-				message: "user not found",
-			});
-		} else {
-			//make update & return data
+	}
 
-			res.status(200).json({
-				success: "true",
-				name: user.name,
-				lastnames: user.lastnames,
-				user_role_id: user.user_role_id,
-			});
+	try {
+		const user = await prisma.user.findUnique({
+			where: {
+				id: id,
+			},
+		});
+
+		if (!user) {
+			res.status(200).json(
+				apiResponse({
+					code: "error",
+					header: "User doesn't exist",
+					message: "There's no user with that email, please check your email or signup",
+				})
+			);
 		}
+		// Search for last acceslog entry from user_id
+		const logToUpdate = await prisma.acces_log.findMany({
+			where: {
+				//user_id: id,
+				AND: [
+					{user_id: id},
+					{
+						logout: {
+							equals: new Date(0),
+						},
+					},
+				],
+			},
+		});
+		//FinMany returns array
+		const data = await prisma.acces_log.update({
+			where: {
+				id: logToUpdate[0].id,
+			},
+			data: {
+				logout: new Date(),
+			},
+		});
+		res.status(200).json(
+			apiResponse({
+				message: "User logged out succesfully",
+				data: logToUpdate[0].id,
+			})
+		);
 	} catch (err) {
-		console.error(err);
+		console.log(err);
 		res.status(500).send({
+			code: "error",
 			message: err.message || "Some error ocurred while retrieving your account.",
 		});
 	}
+	res.status(200).json({test: "found", data: id});
 };
 
 //Update some user field with id_user & newfield (FOR TESTING PURPOSE)
@@ -270,8 +333,16 @@ exports.updateUser = async (req, res) => {
 	}
 
 	try {
-		const user = await prisma.user.update({...req.body}, {where: {id: req.body.user_id}});
-		if (user === null) {
+		// Update if email checked
+		const updateUser = await prisma.user.update({
+			where: {
+				email: req.body.email,
+			},
+			data: {
+				name: req.body.name,
+			},
+		});
+		if (updateUser === null) {
 			res.status(204).json(
 				apiResponse({
 					message: "User not Found.",
@@ -296,38 +367,35 @@ exports.updateUser = async (req, res) => {
 // Delete user
 exports.deleteUser = async (req, res) => {
 	// Check that the request isn't empty
-	if (!req.user) {
-		res.status(404).send("User not found.");
+	if (!req.params.userId) {
+		res.status(404).send("No userId found.");
 	}
 	try {
-		const userModel = await prisma.mec_user.findOne({
-			raw: true,
-			nest: true,
-			attributes: {
-				exclude: ["mec_pwd", "password_change"],
+		const userId = parseInt(req.params.userId);
+		const userToDelete = await prisma.user.findUnique({
+			where: {
+				id: userId,
 			},
-			include: [
-				{
-					model: prisma.profile,
-					attributes: ["id"],
-				},
-				{
-					model: prisma.mecuser_people,
-				},
-				{model: prisma.people},
-			],
-			where: {id: req.user.uid},
 		});
 
-		if (userModel) {
-			if (userModel.person.picture) {
-				userModel.person.picture = Buffer.from(userModel.person.picture).toString("base64");
-			}
-			res.status(200).json(userModel);
-		} else {
-			res.status(404).json({
-				message: "User not found.",
+		if (!userToDelete) {
+			res.status(200).send({
+				code: "error",
+				header: "User doesn't exist",
+				message: "There's no user with that ID, please try again.",
 			});
+			return;
+		} else {
+			const deletedUser = await prisma.user.delete({
+				where: {
+					id: userId,
+				},
+			});
+			res.status(200).json(
+				apiResponse({
+					message: "User deleted successfully",
+				})
+			);
 		}
 	} catch (err) {
 		console.error(err);
@@ -337,57 +405,21 @@ exports.deleteUser = async (req, res) => {
 	}
 };
 
-exports.forgetPassword = async (req, res) => {
-	const {email} = req.body;
+// Recover password
+/* exports.receiveEmailGetToken = async (req, res) => {
 	try {
-		const user = await prisma.mec_user.findOne({where: {mec_un: email}});
-		if (user) {
-			const token = JWT.sign(
-				{
-					iss: "itacademy",
-					sub: {
-						email,
-					},
-					iat: new Date().getTime(),
-					exp: new Date().setDate(new Date().getMinutes() + 20), // Expires in 20 Minutes
-				},
-				process.env.JWT_SECRET
+		const userEmail = req.body.email;
+		if (!userEmail) {
+			res.status(400).json(
+				apiResponse({
+					message: "User email is empty.",
+				})
 			);
-			await prisma.password_recovery_log.create({
-				id_mec_user: user.id,
-				recovery_date: new Date(),
-				recovery_active: true,
-				token_id: token,
-				password_old: user.password,
-			});
-			res.status(200).json({
-				code: "success",
-				header: "Forget Pass succesful url temp",
-				message: "You have succesfuly forget Pass succesful url temp.",
-				hash: encodeURI(new Buffer(token).toString("base64")), // cambiar
-			});
-		} else {
-			res.status(404).send({
-				code: "not-found",
-				header: "user",
-				message: "Email not found.",
-			});
 		}
-	} catch (err) {
-		console.log(err);
-		res.status(500).send({
-			message: err.message || "Some error ocurred.",
-		});
-	}
-};
 
-exports.receiveEmailGetToken = async (req, res) => {
-	try {
-		const {user} = req.body;
-
-		const passUser = await prisma.user.findOne({
+		const passUser = await prisma.user.findUnique({
 			where: {
-				email: user,
+				email: userEmail,
 			},
 		});
 
@@ -416,11 +448,116 @@ exports.receiveEmailGetToken = async (req, res) => {
 			})
 		);
 	}
+}; */
+
+//Update role to user with id_user & id_role (FOR TESTING PURPOSE)
+exports.updateUserRole = async (req, res) => {
+	if (!req.body.user_role_id) {
+		res.status(400).send("No user role data");
+	}
+	try {
+		let user_id = parseInt(req.params.id);
+		// if query no succesfull, prisma query sends error message
+		await prisma.user.update({
+			where: {
+				id: user_id,
+			},
+			data: {
+				user_role_id: req.body.user_role_id,
+			},
+		});
+
+		res.status(200).json(
+			apiResponse({
+				message: "User role successfully updated",
+			})
+		);
+	} catch (err) {
+		console.error(err);
+		res.status(500).send({
+			message: err.message || "role could not be modified",
+		});
+	}
 };
 
+// Update password log and send email to get Recover password link.
+exports.forgetPassword = async (req, res) => {
+	const {email} = req.body;
+	try {
+		const user = await prisma.user.findUnique({where: {email: email}});
+		if (user) {
+			const temporaryToken = JWT.sign(
+				{
+					iss: "itacademy",
+					sub: {
+						email,
+					},
+					iat: new Date().getTime(),
+					exp: new Date().setDate(new Date().getMinutes() + 20), // Expires in 20 Minutes
+				},
+				process.env.JWT_SECRET
+			);
+
+			// Update password recovery log
+			const passwordLog = await prisma.pswd_recovery_log.create({
+				data: {
+					recovery_date: new Date(),
+					recovery_active: true,
+					token_id: temporaryToken,
+					password_old: user.password,
+					user_id: user.id,
+				},
+			});
+			// Hash temporary token
+			const bufferedToken = Buffer.from(temporaryToken, "utf8");
+			const hashedToken = encodeURI(bufferedToken.toString("base64"));
+
+			// create recovery link and html template mock
+			const recoveryLink = `${process.env.CLIENT_URL}/passwordReset?token=${hashedToken}&id=${user.id}`;
+			const template = `<html><head></head><body>Recovery lin ${recoveryLink}</body></html>`;
+
+			// Send email to user
+			const response = await sendEmail(
+				user.email,
+				"Password Reset Request",
+				{
+					name: user.name,
+					link: recoveryLink,
+				},
+				template
+			);
+			if (response) {
+				res.status(200).json(
+					apiResponse({
+						message: "Temporary token succesfully created.",
+					})
+				);
+			} else {
+				res.status(400).json(apiResponse({
+					error: "No email sent",
+					message: "Temporary token succesfully created.",
+				}))
+			}
+		} else {
+			res.status(404).json(
+				apiResponse({
+					errors: "not-found",
+					message: "Email not found.",
+				})
+			);
+		}
+	} catch (err) {
+		console.log(err);
+		res.status(500).send({
+			message: err.message || "Some error ocurred.",
+		});
+	}
+};
+
+// Recover user password
 exports.recoverPassword = async (req, res) => {
 	try {
-		const token = req.params.token;
+		const token = req.body.token;
 
 		if (!token) {
 			res.status(401).json(
@@ -457,7 +594,7 @@ exports.recoverPassword = async (req, res) => {
 	}
 };
 
-exports.changePassword = async (req, res) => {
+/* exports.changePassword = async (req, res) => {
 	try {
 		const {password, user} = req.body;
 
@@ -469,7 +606,7 @@ exports.changePassword = async (req, res) => {
 			parallelism: 1,
 		});
 
-		const passUser = await prisma.user.findOne({
+		const passUser = await prisma.user.findUnique({
 			where: {
 				email: user,
 			},
@@ -491,4 +628,4 @@ exports.changePassword = async (req, res) => {
 			})
 		);
 	}
-};
+}; */
