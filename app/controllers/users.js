@@ -7,6 +7,7 @@ const Hashids = require("hashids");
 const {apiResponse, signToken, signRefreshToken, registerSchema} = require("../utils/utils");
 const prisma = require("../../prisma/indexPrisma");
 const {Buffer} = require("buffer");
+const sendEmail = require("../utils/sendEmail");
 
 // Refresh token
 exports.getRefreshToken = (req, res) => {
@@ -479,7 +480,7 @@ exports.updateUserRole = async (req, res) => {
 	}
 };
 
-// Update password log and hash token.
+// Update password log and send email to get new passpowrd.
 exports.forgetPassword = async (req, res) => {
 	const {email} = req.body;
 	try {
@@ -496,6 +497,8 @@ exports.forgetPassword = async (req, res) => {
 				},
 				process.env.JWT_SECRET
 			);
+
+			// Update password recovery log
 			const passwordLog = await prisma.pswd_recovery_log.create({
 				data: {
 					recovery_date: new Date(),
@@ -505,21 +508,35 @@ exports.forgetPassword = async (req, res) => {
 					user_id: user.id,
 				},
 			});
+			// Hash temporary token
 			const bufferedToken = Buffer.from(token, "utf8");
+			const hashedToken = encodeURI(bufferedToken.toString("base64"));
 
-			res.status(200).json({
-				code: "success",
-				header: "Forget Pass succesful url temp",
-				message: "You have succesfuly forget Pass succesful url temp.",
-				//hash: encodeURI(new Buffer(token).toString("base64")), // cambiar
-				hash: encodeURI(bufferedToken.toString("base64")),
-			});
+			// create recovery link
+			const recoveryLink = `${process.env.FROM_EMAIL}/passwordReset?token=${hashedToken}&id=${user.id}`;
+			
+			// Send email to user
+			sendEmail(
+				user.email,
+				"Password Reset Request",
+				{
+				  name: user.name,
+				  link: recoveryLink,
+				},
+				//htmt: ""
+			  );
+			
+			res.status(200).json(
+				apiResponse({
+				message: "Temporary token succesfully created.",
+			}));
+
 		} else {
-			res.status(404).send({
-				code: "not-found",
-				header: "user",
+			res.status(404).json(
+				apiResponse({
+				errors: "not-found",
 				message: "Email not found.",
-			});
+			}));
 		}
 	} catch (err) {
 		console.log(err);
@@ -533,7 +550,6 @@ exports.forgetPassword = async (req, res) => {
 exports.recoverPassword = async (req, res) => {
 	try {
 		const token = req.params.token;
-		//res.json({token: "hola"})
 
 		if (!token) {
 			res.status(401).json(

@@ -107,28 +107,7 @@ router.patch("/v1/user", UsersController.updateUser);
 // Delete user
 router.delete("/v1/:userId", UsersController.deleteUser);
 
-/**
- * RecoverPassword data
- * @typedef {object} userRecoverData
- * @property {string} email.required - Email of the user
- * @property {boolean} privacy.required - Accept privacy from user
- */
 
-/**
- * POST /users/v1/recover-password
- * @summary Allows user recover password
- * @tags User
- * @param {userRecoverData} request.body.required - The payload looks like this:
- * @return {object} 200 - success response - application/json
- * @return {object} 400 - Bad request response
- * @example request - Payload example
- * { "email": "email@example.com", "privacy":true}
- * @example response - 200 - Example success response
- * { "status":"200", "message": "email sent successfully"}
- * @example response - 400 - Example error response
- * { "errCode":"errCode", "message":"email not found"}
- */
-router.post("/v1/recover-password", UsersController.receiveEmailGetToken);
 
 /**
  * PATCH /users/v1/update-role"
@@ -166,20 +145,43 @@ router.get("/v1/change-password/:token", UsersController.recoverPassword);
 
 /**
  * GET /users/v1/forget-password/"
- * @summary Allows user update his role
+ * @summary Create a temporary toke to recover password
  * @tags User
- * @param {userRecoverData} request.params.required - The payload looks like this:
+ * @param {userRecoverData} request.body.required - The payload looks like this:
  * @return {object} 200 - success response - application/json
  * @return {object} 400 - Bad request response
  * @example request - Payload example
- * { "email": "examaple@gmail.com"}
+ * { "email": "example@gmail.com"}
  * @example response - 200 - Example success response
- * { "status":"200", "message": "Password recover done."}
+ * { "status":"200", "message": "Temporary token succesfully created."}
  * @example response - 400 - Example error response
- * { "errCode":"errCode", "message":"Password could not be recovered"}
+ * { "errCode":"errCode", "message":"Temporary token could not be recovered"}
  */
 
- router.get("/v1/forget-password/", UsersController.forgetPassword);
+ router.get("/v1/forgot_password/", UsersController.forgetPassword);
+/**
+ * RecoverPassword data
+ * @typedef {object} userRecoverData
+ * @property {string} email.required - Email of the user
+ * @property {boolean} privacy.required - Accept privacy from user
+ */
+
+/**
+ * POST /users/v1/recover-password
+ * @summary Allows user recover password
+ * @tags User
+ * @param {userRecoverData} request.body.required - The payload looks like this:
+ * @return {object} 200 - success response - application/json
+ * @return {object} 400 - Bad request response
+ * @example request - Payload example
+ * { "email": "email@example.com", "privacy":true}
+ * @example response - 200 - Example success response
+ * { "status":"200", "message": "email sent successfully"}
+ * @example response - 400 - Example error response
+ * { "errCode":"errCode", "message":"email not found"}
+ */
+ router.post("/v1/recover-password", UsersController.receiveEmailGetToken);
+
 
 //router.post("/v1/change-password", UsersController.changePassword);
 
