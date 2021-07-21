@@ -6,6 +6,7 @@ const {getRedisClient} = require("../utils/initRedis");
 const Hashids = require("hashids");
 const {apiResponse, signToken, signRefreshToken, registerSchema} = require("../utils/utils");
 const prisma = require("../../prisma/indexPrisma");
+const {Buffer} = require("buffer");
 
 // Refresh token
 exports.getRefreshToken = (req, res) => {
@@ -246,7 +247,7 @@ exports.login = async (req, res) => {
 // User Logout
 exports.logout = async (req, res) => {
 	const id = req.body.user_id;
-		// Check that the request isn't empty
+	// Check that the request isn't empty
 	if (!id) {
 		res.status(400).json(
 			apiResponse({
@@ -268,39 +269,37 @@ exports.logout = async (req, res) => {
 				apiResponse({
 					code: "error",
 					header: "User doesn't exist",
-					message:
-						"There's no user with that email, please check your email or signup",
+					message: "There's no user with that email, please check your email or signup",
 				})
 			);
 		}
 		// Search for last acceslog entry from user_id
 		const logToUpdate = await prisma.acces_log.findMany({
-			where:{
+			where: {
 				//user_id: id,
 				AND: [
 					{user_id: id},
 					{
-						logout:{
-							equals: new Date(0)
-						}
-					}
-				]
+						logout: {
+							equals: new Date(0),
+						},
+					},
+				],
 			},
 		});
 		//FinMany returns array
-	 	const x = await prisma.acces_log.update({
-			where:{
-				id: logToUpdate[0].id
+		const data = await prisma.acces_log.update({
+			where: {
+				id: logToUpdate[0].id,
 			},
-			data:{
-				logout: new Date()
-			}
-		}) 
+			data: {
+				logout: new Date(),
+			},
+		});
 		res.status(200).json(
 			apiResponse({
-				message: "User logged out succesfully", 
-				data: logToUpdate[0].id
-
+				message: "User logged out succesfully",
+				data: logToUpdate[0].id,
 			})
 		);
 	} catch (err) {
@@ -310,8 +309,7 @@ exports.logout = async (req, res) => {
 			message: err.message || "Some error ocurred while retrieving your account.",
 		});
 	}
-	res.status(200).json({test: "found",data: id})
-
+	res.status(200).json({test: "found", data: id});
 };
 
 //Update some user field with id_user & newfield (FOR TESTING PURPOSE)
@@ -467,10 +465,10 @@ exports.updateUserRole = async (req, res) => {
 				user_role_id: req.body.user_role_id,
 			},
 		});
-		
+
 		res.status(200).json(
 			apiResponse({
-				message: "User role successfully updated"
+				message: "User role successfully updated",
 			})
 		);
 	} catch (err) {
@@ -481,7 +479,7 @@ exports.updateUserRole = async (req, res) => {
 	}
 };
 
-// 
+// Update password log and hash token.
 exports.forgetPassword = async (req, res) => {
 	const {email} = req.body;
 	try {
@@ -498,18 +496,23 @@ exports.forgetPassword = async (req, res) => {
 				},
 				process.env.JWT_SECRET
 			);
-			await prisma.password_recovery_log.create({
-				id_mec_user: user.id,
-				recovery_date: new Date(),
-				recovery_active: true,
-				token_id: token,
-				password_old: user.password,
+			const passwordLog = await prisma.pswd_recovery_log.create({
+				data: {
+					recovery_date: new Date(),
+					recovery_active: true,
+					token_id: token,
+					password_old: user.password,
+					user_id: user.id,
+				},
 			});
+			const bufferedToken = Buffer.from(token, "utf8");
+
 			res.status(200).json({
 				code: "success",
 				header: "Forget Pass succesful url temp",
 				message: "You have succesfuly forget Pass succesful url temp.",
-				hash: encodeURI(new Buffer(token).toString("base64")), // cambiar
+				//hash: encodeURI(new Buffer(token).toString("base64")), // cambiar
+				hash: encodeURI(bufferedToken.toString("base64")),
 			});
 		} else {
 			res.status(404).send({
@@ -567,7 +570,7 @@ exports.recoverPassword = async (req, res) => {
 	}
 };
 
-exports.changePassword = async (req, res) => {
+/* exports.changePassword = async (req, res) => {
 	try {
 		const {password, user} = req.body;
 
@@ -601,4 +604,4 @@ exports.changePassword = async (req, res) => {
 			})
 		);
 	}
-};
+}; */

@@ -164,6 +164,23 @@ router.patch("/v1/update-role/:id", UsersController.updateUserRole);
 
 router.get("/v1/change-password/:token", UsersController.recoverPassword);
 
+/**
+ * GET /users/v1/forget-password/"
+ * @summary Allows user update his role
+ * @tags User
+ * @param {userRecoverData} request.params.required - The payload looks like this:
+ * @return {object} 200 - success response - application/json
+ * @return {object} 400 - Bad request response
+ * @example request - Payload example
+ * { "email": "examaple@gmail.com"}
+ * @example response - 200 - Example success response
+ * { "status":"200", "message": "Password recover done."}
+ * @example response - 400 - Example error response
+ * { "errCode":"errCode", "message":"Password could not be recovered"}
+ */
+
+ router.get("/v1/forget-password/", UsersController.forgetPassword);
+
 //router.post("/v1/change-password", UsersController.changePassword);
 
 module.exports = router;
