@@ -406,7 +406,7 @@ exports.deleteUser = async (req, res) => {
 };
 
 // Recover password
-exports.receiveEmailGetToken = async (req, res) => {
+/* exports.receiveEmailGetToken = async (req, res) => {
 	try {
 		const userEmail = req.body.email;
 		if (!userEmail) {
@@ -448,7 +448,7 @@ exports.receiveEmailGetToken = async (req, res) => {
 			})
 		);
 	}
-};
+}; */
 
 //Update role to user with id_user & id_role (FOR TESTING PURPOSE)
 exports.updateUserRole = async (req, res) => {
@@ -480,13 +480,13 @@ exports.updateUserRole = async (req, res) => {
 	}
 };
 
-// Update password log and send email to get new passpowrd.
+// Update password log and send email to get Recover password link.
 exports.forgetPassword = async (req, res) => {
 	const {email} = req.body;
 	try {
 		const user = await prisma.user.findUnique({where: {email: email}});
 		if (user) {
-			const token = JWT.sign(
+			const temporaryToken = JWT.sign(
 				{
 					iss: "itacademy",
 					sub: {
@@ -503,40 +503,48 @@ exports.forgetPassword = async (req, res) => {
 				data: {
 					recovery_date: new Date(),
 					recovery_active: true,
-					token_id: token,
+					token_id: temporaryToken,
 					password_old: user.password,
 					user_id: user.id,
 				},
 			});
 			// Hash temporary token
-			const bufferedToken = Buffer.from(token, "utf8");
+			const bufferedToken = Buffer.from(temporaryToken, "utf8");
 			const hashedToken = encodeURI(bufferedToken.toString("base64"));
 
-			// create recovery link
-			const recoveryLink = `${process.env.FROM_EMAIL}/passwordReset?token=${hashedToken}&id=${user.id}`;
-			
+			// create recovery link and html template mock
+			const recoveryLink = `${process.env.CLIENT_URL}/passwordReset?token=${hashedToken}&id=${user.id}`;
+			const template = `<html><head></head><body>Recovery lin ${recoveryLink}</body></html>`;
+
 			// Send email to user
-			sendEmail(
+			const response = await sendEmail(
 				user.email,
 				"Password Reset Request",
 				{
-				  name: user.name,
-				  link: recoveryLink,
+					name: user.name,
+					link: recoveryLink,
 				},
-				//htmt: ""
-			  );
-			
-			res.status(200).json(
-				apiResponse({
-				message: "Temporary token succesfully created.",
-			}));
-
+				template
+			);
+			if (response) {
+				res.status(200).json(
+					apiResponse({
+						message: "Temporary token succesfully created.",
+					})
+				);
+			} else {
+				res.status(400).json(apiResponse({
+					error: "No email sent",
+					message: "Temporary token succesfully created.",
+				}))
+			}
 		} else {
 			res.status(404).json(
 				apiResponse({
-				errors: "not-found",
-				message: "Email not found.",
-			}));
+					errors: "not-found",
+					message: "Email not found.",
+				})
+			);
 		}
 	} catch (err) {
 		console.log(err);
@@ -549,7 +557,7 @@ exports.forgetPassword = async (req, res) => {
 // Recover user password
 exports.recoverPassword = async (req, res) => {
 	try {
-		const token = req.params.token;
+		const token = req.body.token;
 
 		if (!token) {
 			res.status(401).json(

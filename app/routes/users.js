@@ -168,19 +168,19 @@ router.get("/v1/change-password/:token", UsersController.recoverPassword);
 
 /**
  * POST /users/v1/recover-password
- * @summary Allows user recover password
- * @tags User
+ * @summary Confirms user allowed to get new password
+ * * @tags token
  * @param {userRecoverData} request.body.required - The payload looks like this:
  * @return {object} 200 - success response - application/json
  * @return {object} 400 - Bad request response
  * @example request - Payload example
- * { "email": "email@example.com", "privacy":true}
+ * { "token": "email@example.com", "privacy":true}
  * @example response - 200 - Example success response
- * { "status":"200", "message": "email sent successfully"}
+ * { "status":"200", "message": "Authorization granted to change your password."}
  * @example response - 400 - Example error response
- * { "errCode":"errCode", "message":"email not found"}
+ * { "errCode":"errCode", "message":"Your token has expired"}
  */
- router.post("/v1/recover-password", UsersController.receiveEmailGetToken);
+ router.post("/v1/recover_password", UsersController.recoverPassword);
 
 
 //router.post("/v1/change-password", UsersController.changePassword);
