@@ -48,11 +48,11 @@ services:
     rest:
         image: postgrest/postgrest
         ports:
-            - "3000:3000"
+            - "1000:1000"
         networks:
             - backend
         environment:
-            PGRST_DB_URI: postgresql://ita_db_admin:]:NWM&KgE6C}Bg2-@db:5432/itabe
+            PGRST_DB_URI: postgresql://postgres:psql@db:5432/postgres?schema=public
             PGRST_DB_SCHEMA: public
             PGRST_DB_ANON_ROLE: ${DB_USER} #In production this role should not be the same as the one used for the connection
             PGRST_SERVER_PROXY_URI: "http://127.0.0.1:3000"

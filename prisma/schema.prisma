@@ -39,7 +39,6 @@ model user {
   user_status_id   Int
   user_role        user_role          @relation(fields: [user_role_id], references: [id])
   user_role_id     Int
-  refresh_token    String
   acces_log        acces_log[]
   recover_password recover_password[]
   media            media[]
@@ -48,8 +47,8 @@ model user {
 
 model acces_log {
   id      Int      @id @default(autoincrement())
-  login   DateTime
-  logout  DateTime
+  login   DateTime 
+  logout  DateTime 
   user    user     @relation(fields: [user_id], references: [id])
   user_id Int
 }
