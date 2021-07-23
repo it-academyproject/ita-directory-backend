@@ -1,6 +1,7 @@
 const prisma = require("../../prisma/indexPrisma");
 const {apiResponse, adsSchema, AdByIdParamSchema} = require("../utils/utils");
 
+// Create an Ad
 async function createAd(req, res) {
 	try {
 		// fields -> user_id, title, description, city, n_rooms, price, square_meters, n_bathrooms, map_lat, map_lon
@@ -43,6 +44,7 @@ async function createAd(req, res) {
 	}
 }
 
+// Get alle existing Ads in database
 async function getAllAds(req, res) {
 	try {
 		const ads = await prisma.ads.findMany();
@@ -63,10 +65,11 @@ async function getAllAds(req, res) {
 	}
 }
 
+// Get an Ad by Id
 async function getAdById(req, res) {
 	try {
 		const adId = parseInt(req.params.adId);
-
+		console.log("ID", adId);
 		// Validates if integer.
 		await AdByIdParamSchema.validateAsync(adId);
 
@@ -107,6 +110,7 @@ async function getAdById(req, res) {
 	}
 }
 
+// Delete an Ad by ID
 async function deleteById(req, res) {
 	try {
 		const adId = parseInt(req.params.adId);

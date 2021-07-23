@@ -5,9 +5,9 @@ const cors = require("cors");
 const helmet = require("helmet");
 const expressJSDocSwagger = require("express-jsdoc-swagger");
 const options = require("./utils/swaggerOptions");
-// const userRoutes = require("./routes/users");
+const userRoutes = require("./routes/users");
 // const constantsRoute = require("./routes/constants");
-// const adsRoutes = require("./routes/ads");
+const adsRoutes = require("./routes/ads");
 // const authenticateToken = require("./middleware/verifyToken");
 // const UsersController = require("./controllers/users");
 // const {loadConstants} = require("./utils/CONSTANTS");
@@ -41,14 +41,14 @@ expressJSDocSwagger(app)(options);
 // app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Simple, initial route
-app.get("/", (req, res) => {
+/* app.get("/", (req, res) => {
 	res.json({message: "ITA DIRECTORY API"});
-});
+}); */
 
 // Routes
 // app.use("/", constantsRoute);
-// app.use("/ads", adsRoutes);
-// app.use("/users", userRoutes);
+app.use("/ads", adsRoutes);
+app.use("/users", userRoutes);
 
 // app.get("/get-token", UsersController.getToken);
 // app.get("/test-token", authenticateToken, (req, res) => {

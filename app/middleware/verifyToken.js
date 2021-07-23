@@ -6,7 +6,7 @@ const authenticateToken = (req, res, next) => {
 	const hashids = new Hashids(process.env.HASH_ID_SECRET, 10);
 	const authHeader = req.headers["authorization"];
 	if (typeof authHeader !== "undefined") {
-		const token = authHeader && authHeader.split(" ")[1];
+		const token = req.headers.token;
 		if (token == null) return res.sendStatus(401);
 		jwt.verify(token, process.env.JWT_SECRET, (err, authData) => {
 			if (err) return res.status(401).json(apiResponse({message: "Token has expired!"}));

@@ -20,6 +20,8 @@ const registerSchema = Joi.object({
 	email: Joi.string().email().required(),
 	password: Joi.string().min(2).required(),
 	privacy: Joi.boolean().valid(true).required(),
+	user_status: Joi.number().required(),
+	user_role: Joi.number().required(),
 });
 
 const adsSchema = Joi.object({
@@ -50,7 +52,7 @@ const signRefreshToken = (userid, maxAge = 86400) => {
 	const secret = process.env.JWT_REFRESH_TOKEN_SECRET;
 	const options = {expiresIn: maxAge};
 	const token = JWT.sign(payload, secret, options);
-	getRedisClient().set(userid, token, "EX", maxAge);
+	//getRedisClient().set(userid, token, "EX", maxAge);
 	return token;
 };
 
