@@ -8,6 +8,7 @@ const {apiResponse, signToken, signRefreshToken, registerSchema} = require("../u
 const prisma = require("../../prisma/indexPrisma");
 const {Buffer} = require("buffer");
 const sendEmail = require("../utils/sendEmail");
+const emailGenerator = require("../utils/emailGenerator");
 
 // Refresh token
 exports.getRefreshToken = (req, res) => {
@@ -514,8 +515,9 @@ exports.forgetPassword = async (req, res) => {
 
 			// create recovery link and html template mock
 			const recoveryLink = `${process.env.CLIENT_URL}/passwordReset?token=${hashedToken}&id=${user.id}`;
-			const template = `<html><head></head><body>Recovery lin ${recoveryLink}</body></html>`;
-
+			// Generates an email with all data to recover password
+			//const recoveryEmail = `<html><head></head><body>Recovery lin ${recoveryLink}</body></html>`;
+			const recoveryEmail = await emailGenerator(recoveryLink);
 			// Send email to user
 			const response = await sendEmail(
 				user.email,
@@ -524,7 +526,7 @@ exports.forgetPassword = async (req, res) => {
 					name: user.name,
 					link: recoveryLink,
 				},
-				template
+				recoveryEmail,
 			);
 			if (response) {
 				res.status(200).json(
